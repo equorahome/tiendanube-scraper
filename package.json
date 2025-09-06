@@ -9,15 +9,15 @@
     "build": "echo 'No build required'"
   },
   "dependencies": {
-    "puppeteer-core": "^21.5.0",
-    "@sparticuz/chromium": "^119.0.0",
-    "puppeteer": "^21.5.0",
+    "puppeteer-core": "^23.0.0",
+    "@sparticuz/chromium": "^131.0.0",
+    "puppeteer": "^23.0.0",
     "@supabase/supabase-js": "^2.38.0",
     "axios": "^1.6.0",
     "cheerio": "^1.0.0-rc.12"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   },
   "keywords": ["scraper", "tiendanube", "precios", "argentina"],
   "author": "Ignacio Llamas",
