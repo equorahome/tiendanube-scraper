@@ -3,11 +3,5 @@
     "api/**/*.js": {
       "maxDuration": 300
     }
-  },
-  "crons": [
-    {
-      "path": "/api/webhook",
-      "schedule": "0 6,18 * * *"
-    }
-  ]
+  }
 }
