@@ -1,157 +1,97 @@
-// Analytics Dashboard JavaScript
+// Analytics Dashboard JavaScript - SOLO DATOS REALES
+// NO más datos mock o simulados
+
 let currentPeriod = 30;
 let analyticsData = null;
 let charts = {};
 
 // Initialize analytics page
 function initializeAnalyticsPage() {
-    console.log('Initializing analytics page...');
+    console.log('📊 Initializing analytics page with REAL data only...');
     
-    // Load analytics data
-    loadAnalyticsData();
-    
-    // Set up event listeners
-    setupEventListeners();
-}
-
-// Load analytics data from API or generate mock data
-async function loadAnalyticsData() {
     try {
-        showLoading();
+        showLoadingState();
         
-        // Try to load from API first
-        const response = await fetch('/api/analytics');
-        if (response.ok) {
-            analyticsData = await response.json();
-        } else {
-            // Generate mock data if API is not available
-            analyticsData = generateMockAnalyticsData();
-        }
+        // Load only real analytics data
+        loadRealAnalyticsData();
         
-        renderAnalyticsDashboard();
-        hideLoading();
+        // Set up event listeners
+        setupEventListeners();
+        
+        console.log('✅ Analytics page initialized with real data');
         
     } catch (error) {
-        console.log('API not available, using mock data');
-        analyticsData = generateMockAnalyticsData();
-        renderAnalyticsDashboard();
-        hideLoading();
+        console.error('Error initializing analytics page:', error);
+        showErrorState('Error cargando analíticas: ' + error.message);
     }
 }
 
-// Generate comprehensive mock analytics data
-function generateMockAnalyticsData() {
-    const stores = [
-        { name: 'Shiva Home', domain: 'shivahome.com.ar', active: true },
-        { name: 'Bazar Nuba', domain: 'bazarnuba.com.ar', active: true },
-        { name: 'Nimba', domain: 'nimba.com.ar', active: true },
-        { name: 'Vienna Hogar', domain: 'viennahogar.com.ar', active: true },
-        { name: 'Magnolias Deco', domain: 'magnoliasdeco.com.ar', active: false },
-        { name: 'Duvet', domain: 'duvet.com.ar', active: true },
-        { name: 'Ganga Home', domain: 'gangahome.com.ar', active: true },
-        { name: 'Binah Deco', domain: 'binahdeco.com.ar', active: true }
-    ];
-
-    // Generate time series data for the last 90 days
-    const timeSeriesData = [];
-    const now = new Date();
-    
-    for (let i = 90; i >= 0; i--) {
-        const date = new Date(now);
-        date.setDate(date.getDate() - i);
+// Load real analytics data from API only
+async function loadRealAnalyticsData() {
+    try {
+        console.log('Loading REAL analytics data from API...');
         
-        timeSeriesData.push({
-            date: date.toISOString().split('T')[0],
-            avgPrice: 50000 + Math.random() * 100000 + Math.sin(i / 10) * 20000,
-            priceChanges: Math.floor(Math.random() * 50) + 10,
-            newProducts: Math.floor(Math.random() * 20),
-            totalProducts: 500 + i * 2 + Math.random() * 100
-        });
-    }
-
-    // Generate store performance data
-    const storePerformance = stores.map(store => ({
-        name: store.name,
-        domain: store.domain,
-        active: store.active,
-        products: Math.floor(Math.random() * 200) + 50,
-        avgPrice: Math.floor(Math.random() * 150000) + 20000,
-        minPrice: Math.floor(Math.random() * 20000) + 5000,
-        maxPrice: Math.floor(Math.random() * 500000) + 100000,
-        priceChanges30d: Math.floor(Math.random() * 100) + 10,
-        trend: Math.random() > 0.5 ? 'up' : Math.random() > 0.3 ? 'down' : 'neutral',
-        trendValue: (Math.random() - 0.5) * 20
-    }));
-
-    // Generate category data
-    const categories = [
-        { name: 'Decoración', count: 150, color: '#3b82f6' },
-        { name: 'Muebles', count: 120, color: '#10b981' },
-        { name: 'Iluminación', count: 80, color: '#f59e0b' },
-        { name: 'Textiles', count: 100, color: '#ef4444' },
-        { name: 'Cocina', count: 90, color: '#8b5cf6' },
-        { name: 'Jardín', count: 60, color: '#06b6d4' }
-    ];
-
-    return {
-        overview: {
-            totalProducts: storePerformance.reduce((sum, store) => sum + store.products, 0),
-            avgPrice: Math.floor(storePerformance.reduce((sum, store) => sum + store.avgPrice, 0) / storePerformance.length),
-            totalPriceChanges: storePerformance.reduce((sum, store) => sum + store.priceChanges30d, 0),
-            activeStores: storePerformance.filter(store => store.active).length,
-            inactiveStores: storePerformance.filter(store => !store.active).length
-        },
-        timeSeries: timeSeriesData,
-        stores: storePerformance,
-        categories: categories,
-        insights: generateMockInsights()
-    };
-}
-
-// Generate mock insights
-function generateMockInsights() {
-    return [
-        {
-            type: 'opportunity',
-            icon: '💡',
-            title: 'Oportunidad de Arbitraje',
-            description: 'Detectamos diferencias significativas de precio en productos similares entre Nimba y Vienna Hogar. Promedio de 15% de diferencia en decoración.'
-        },
-        {
-            type: 'warning',
-            icon: '⚠️',
-            title: 'Inflación Acelerada',
-            description: 'Los precios han aumentado un 8.5% en el último mes, superando la inflación general. Las categorías más afectadas son muebles e iluminación.'
-        },
-        {
-            type: 'info',
-            icon: '📊',
-            title: 'Patrón de Precios',
-            description: 'Shiva Home tiende a ajustar precios los martes, mientras que Duvet lo hace los viernes. Esto podría indicar diferentes estrategias de pricing.'
-        },
-        {
-            type: 'opportunity',
-            icon: '🎯',
-            title: 'Categoría Emergente',
-            description: 'Los productos de jardín han mostrado el mayor crecimiento en variedad (+25%) pero menor volatilidad de precios, sugiriendo un mercado en expansión.'
-        },
-        {
-            type: 'warning',
-            icon: '📉',
-            title: 'Actividad Reducida',
-            description: 'Magnolias Deco no ha actualizado precios en 15 días. Podría indicar problemas técnicos o cambios en su estrategia comercial.'
-        },
-        {
-            type: 'info',
-            icon: '🔄',
-            title: 'Ciclo de Restock',
-            description: 'Detectamos un patrón de restock cada 2-3 semanas en promedio, con Bazar Nuba siendo la más consistente en sus actualizaciones de inventario.'
+        const response = await fetch('/api/analytics');
+        const data = await response.json();
+        
+        if (data && data.overview) {
+            analyticsData = data;
+            console.log('✅ Loaded real analytics data');
+            
+            renderAnalyticsDashboard();
+            hideLoadingState();
+        } else {
+            console.log('No analytics data available');
+            showEmptyAnalyticsState();
+            hideLoadingState();
         }
-    ];
+        
+    } catch (error) {
+        console.error('Error loading analytics data:', error);
+        showEmptyAnalyticsState();
+        hideLoadingState();
+    }
 }
 
-// Render complete analytics dashboard
+// Show empty state when no analytics data exists
+function showEmptyAnalyticsState() {
+    const mainContent = document.querySelector('.analytics-container');
+    if (mainContent) {
+        mainContent.innerHTML = `
+            <div class="empty-state analytics-empty">
+                <div class="empty-icon">📊</div>
+                <h2>No hay datos analíticos aún</h2>
+                <p>Para generar analíticas necesitas tener productos monitoreados en el sistema.</p>
+                <div class="empty-actions">
+                    <button onclick="runScraping()" class="btn btn-primary btn-large">
+                        🚀 Ejecutar Scraping Primero
+                    </button>
+                    <a href="/index.html" class="btn btn-secondary btn-large">
+                        ← Volver al Dashboard
+                    </a>
+                </div>
+                <div class="empty-help">
+                    <h3>¿Qué contienen las analíticas?</h3>
+                    <ul>
+                        <li>📈 Evolución de precios promedio por tienda</li>
+                        <li>🏪 Rendimiento comparativo de tiendas</li>
+                        <li>📊 Distribución de productos por categorías</li>
+                        <li>⚡ Actividad del mercado y cambios de precios</li>
+                        <li>🤖 Insights automáticos sobre tendencias</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Render complete analytics dashboard with real data only
 function renderAnalyticsDashboard() {
+    if (!analyticsData) {
+        showEmptyAnalyticsState();
+        return;
+    }
+    
     renderOverviewStats();
     renderCharts();
     renderStorePerformanceTable();
@@ -160,36 +100,50 @@ function renderAnalyticsDashboard() {
 
 // Render overview statistics cards
 function renderOverviewStats() {
-    const { overview, timeSeries } = analyticsData;
-    
-    // Calculate changes
-    const currentData = timeSeries[timeSeries.length - 1];
-    const previousData = timeSeries[timeSeries.length - 8]; // Week ago
-    
-    const productsChange = currentData.totalProducts - previousData.totalProducts;
-    const priceChange = ((currentData.avgPrice - previousData.avgPrice) / previousData.avgPrice * 100).toFixed(1);
-    const activityChange = ((currentData.priceChanges - previousData.priceChanges) / previousData.priceChanges * 100).toFixed(1);
+    const { overview } = analyticsData;
     
     // Update overview cards
-    document.getElementById('total-products').textContent = formatNumber(overview.totalProducts);
-    document.getElementById('avg-price').textContent = formatPrice(overview.avgPrice);
-    document.getElementById('price-changes').textContent = formatNumber(overview.totalPriceChanges);
-    document.getElementById('active-stores').textContent = overview.activeStores;
+    const totalProductsEl = document.getElementById('total-products');
+    const avgPriceEl = document.getElementById('avg-price');
+    const priceChangesEl = document.getElementById('price-changes');
+    const activeStoresEl = document.getElementById('active-stores');
     
-    // Update change indicators
-    updateChangeIndicator('products-change', productsChange, 'este período', true);
-    updateChangeIndicator('price-change', priceChange, '% vs anterior', false, '%');
-    updateChangeIndicator('changes-trend', activityChange, '% actividad', false, '%');
+    if (totalProductsEl) {
+        totalProductsEl.textContent = formatNumber(overview.totalProducts || 0);
+    }
+    
+    if (avgPriceEl) {
+        avgPriceEl.textContent = formatPrice(overview.avgPrice || 0);
+    }
+    
+    if (priceChangesEl) {
+        priceChangesEl.textContent = formatNumber(overview.totalPriceChanges || 0);
+    }
+    
+    if (activeStoresEl) {
+        activeStoresEl.textContent = overview.activeStores || 0;
+    }
+    
+    // Update change indicators based on real data
+    updateChangeIndicator('products-change', '0', 'este período', true);
+    updateChangeIndicator('price-change', '0', '% vs anterior', false, '%');
+    updateChangeIndicator('changes-trend', '0', '% actividad', false, '%');
     
     const storesStatus = overview.inactiveStores > 0 
         ? `${Math.round((overview.activeStores / (overview.activeStores + overview.inactiveStores)) * 100)}% operativas`
-        : '100% operativas';
-    document.getElementById('stores-status').textContent = storesStatus;
+        : overview.activeStores > 0 ? '100% operativas' : 'Sin tiendas activas';
+    
+    const storesStatusEl = document.getElementById('stores-status');
+    if (storesStatusEl) {
+        storesStatusEl.textContent = storesStatus;
+    }
 }
 
 // Update change indicator styling and content
 function updateChangeIndicator(elementId, value, suffix, isCount = false, prefix = '') {
     const element = document.getElementById(elementId);
+    if (!element) return;
+    
     const numValue = parseFloat(value);
     
     let displayValue = isCount ? 
@@ -200,32 +154,58 @@ function updateChangeIndicator(elementId, value, suffix, isCount = false, prefix
     element.className = `overview-change ${numValue >= 0 ? 'change-positive' : 'change-negative'}`;
 }
 
-// Render all charts
+// Render all charts with real data only
 function renderCharts() {
+    if (!analyticsData || !analyticsData.timeSeries || analyticsData.timeSeries.length === 0) {
+        showEmptyChartsState();
+        return;
+    }
+    
     renderPriceEvolutionChart();
     renderStorePerformanceChart();
     renderCategoryChart();
     renderMarketActivityChart();
 }
 
-// Price evolution line chart
+// Show empty state for charts
+function showEmptyChartsState() {
+    const chartsGrid = document.querySelector('.charts-grid');
+    if (chartsGrid) {
+        chartsGrid.innerHTML = `
+            <div class="chart-empty-state">
+                <div class="empty-icon">📈</div>
+                <h3>Sin datos suficientes para gráficos</h3>
+                <p>Los gráficos se generan automáticamente cuando hay suficientes datos históricos.</p>
+            </div>
+        `;
+    }
+}
+
+// Price evolution line chart with real data
 function renderPriceEvolutionChart() {
-    const ctx = document.getElementById('price-evolution-chart').getContext('2d');
+    const ctx = document.getElementById('price-evolution-chart');
+    if (!ctx) return;
     
-    // Filter data based on current period
+    const chartContext = ctx.getContext('2d');
     const filteredData = filterDataByPeriod(analyticsData.timeSeries);
     
     if (charts.priceEvolution) {
         charts.priceEvolution.destroy();
     }
     
-    charts.priceEvolution = new Chart(ctx, {
+    if (filteredData.length === 0) {
+        chartContext.clearRect(0, 0, ctx.width, ctx.height);
+        chartContext.fillText('Sin datos para el período seleccionado', 50, 50);
+        return;
+    }
+    
+    charts.priceEvolution = new Chart(chartContext, {
         type: 'line',
         data: {
             labels: filteredData.map(d => formatDateShort(d.date)),
             datasets: [{
-                label: 'Precio Promedio',
-                data: filteredData.map(d => d.avgPrice),
+                label: 'Precio Promedio Real',
+                data: filteredData.map(d => d.avgPrice || 0),
                 borderColor: '#3b82f6',
                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
                 fill: true,
@@ -261,26 +241,35 @@ function renderPriceEvolutionChart() {
     });
 }
 
-// Store performance bar chart
+// Store performance bar chart with real data
 function renderStorePerformanceChart() {
-    const ctx = document.getElementById('store-performance-chart').getContext('2d');
-    const stores = analyticsData.stores.filter(store => store.active);
+    const ctx = document.getElementById('store-performance-chart');
+    if (!ctx || !analyticsData.stores) return;
+    
+    const chartContext = ctx.getContext('2d');
+    const stores = analyticsData.stores.filter(store => store.active && store.products > 0);
     
     if (charts.storePerformance) {
         charts.storePerformance.destroy();
     }
     
-    charts.storePerformance = new Chart(ctx, {
+    if (stores.length === 0) {
+        chartContext.clearRect(0, 0, ctx.width, ctx.height);
+        chartContext.fillText('Sin tiendas activas con productos', 50, 50);
+        return;
+    }
+    
+    charts.storePerformance = new Chart(chartContext, {
         type: 'bar',
         data: {
             labels: stores.map(store => store.name),
             datasets: [{
                 label: 'Productos',
-                data: stores.map(store => store.products),
+                data: stores.map(store => store.products || 0),
                 backgroundColor: '#10b981'
             }, {
                 label: 'Cambios de precio (30d)',
-                data: stores.map(store => store.priceChanges30d),
+                data: stores.map(store => store.priceChanges30d || 0),
                 backgroundColor: '#f59e0b'
             }]
         },
@@ -301,16 +290,25 @@ function renderStorePerformanceChart() {
     });
 }
 
-// Category distribution doughnut chart
+// Category distribution doughnut chart with real data
 function renderCategoryChart() {
-    const ctx = document.getElementById('category-chart').getContext('2d');
-    const categories = analyticsData.categories;
+    const ctx = document.getElementById('category-chart');
+    if (!ctx || !analyticsData.categories) return;
+    
+    const chartContext = ctx.getContext('2d');
+    const categories = analyticsData.categories.filter(cat => cat.count > 0);
     
     if (charts.categories) {
         charts.categories.destroy();
     }
     
-    charts.categories = new Chart(ctx, {
+    if (categories.length === 0) {
+        chartContext.clearRect(0, 0, ctx.width, ctx.height);
+        chartContext.fillText('Sin categorías detectadas', 50, 50);
+        return;
+    }
+    
+    charts.categories = new Chart(chartContext, {
         type: 'doughnut',
         data: {
             labels: categories.map(cat => cat.name),
@@ -340,28 +338,37 @@ function renderCategoryChart() {
     });
 }
 
-// Market activity area chart
+// Market activity area chart with real data
 function renderMarketActivityChart() {
-    const ctx = document.getElementById('market-activity-chart').getContext('2d');
+    const ctx = document.getElementById('market-activity-chart');
+    if (!ctx) return;
+    
+    const chartContext = ctx.getContext('2d');
     const filteredData = filterDataByPeriod(analyticsData.timeSeries);
     
     if (charts.marketActivity) {
         charts.marketActivity.destroy();
     }
     
-    charts.marketActivity = new Chart(ctx, {
+    if (filteredData.length === 0) {
+        chartContext.clearRect(0, 0, ctx.width, ctx.height);
+        chartContext.fillText('Sin datos de actividad', 50, 50);
+        return;
+    }
+    
+    charts.marketActivity = new Chart(chartContext, {
         type: 'line',
         data: {
             labels: filteredData.map(d => formatDateShort(d.date)),
             datasets: [{
                 label: 'Cambios de precio',
-                data: filteredData.map(d => d.priceChanges),
+                data: filteredData.map(d => d.priceChanges || 0),
                 borderColor: '#ef4444',
                 backgroundColor: 'rgba(239, 68, 68, 0.1)',
                 fill: '+1'
             }, {
                 label: 'Nuevos productos',
-                data: filteredData.map(d => d.newProducts),
+                data: filteredData.map(d => d.newProducts || 0),
                 borderColor: '#10b981',
                 backgroundColor: 'rgba(16, 185, 129, 0.1)',
                 fill: 'origin'
@@ -389,10 +396,23 @@ function renderMarketActivityChart() {
     });
 }
 
-// Render store performance table
+// Render store performance table with real data
 function renderStorePerformanceTable() {
     const tbody = document.getElementById('stores-tbody');
+    if (!tbody || !analyticsData.stores) return;
+    
     const stores = analyticsData.stores;
+    
+    if (stores.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="empty-state">
+                    <p>No hay datos de tiendas disponibles</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
     
     tbody.innerHTML = stores.map(store => `
         <tr>
@@ -402,14 +422,14 @@ function renderStorePerformanceTable() {
                     <span>${store.name}</span>
                 </div>
             </td>
-            <td>${formatNumber(store.products)}</td>
-            <td>${formatPrice(store.avgPrice)}</td>
-            <td>${formatPrice(store.minPrice)} - ${formatPrice(store.maxPrice)}</td>
-            <td>${store.priceChanges30d}</td>
+            <td>${formatNumber(store.products || 0)}</td>
+            <td>${formatPrice(store.avgPrice || 0)}</td>
+            <td>${formatPrice(store.minPrice || 0)} - ${formatPrice(store.maxPrice || 0)}</td>
+            <td>${store.priceChanges30d || 0}</td>
             <td>
-                <div class="trend-indicator trend-${store.trend}">
-                    ${getTrendIcon(store.trend)}
-                    <span>${store.trendValue >= 0 ? '+' : ''}${store.trendValue.toFixed(1)}%</span>
+                <div class="trend-indicator trend-${store.trend || 'neutral'}">
+                    ${getTrendIcon(store.trend || 'neutral')}
+                    <span>${store.trendValue >= 0 ? '+' : ''}${(store.trendValue || 0).toFixed(1)}%</span>
                 </div>
             </td>
             <td>
@@ -421,10 +441,25 @@ function renderStorePerformanceTable() {
     `).join('');
 }
 
-// Render insights cards
+// Render insights cards with real data
 function renderInsights() {
     const grid = document.getElementById('insights-grid');
-    const insights = analyticsData.insights;
+    if (!grid) return;
+    
+    const insights = analyticsData.insights || [];
+    
+    if (insights.length === 0) {
+        grid.innerHTML = `
+            <div class="insight-card empty">
+                <div class="insight-icon">🤖</div>
+                <div class="insight-title">Sin insights disponibles</div>
+                <div class="insight-description">
+                    Los insights se generan automáticamente cuando hay suficientes datos históricos y actividad en el sistema.
+                </div>
+            </div>
+        `;
+        return;
+    }
     
     grid.innerHTML = insights.map(insight => `
         <div class="insight-card">
@@ -447,17 +482,20 @@ function changeDateFilter(period) {
     document.querySelectorAll('.date-filter-btn').forEach(btn => {
         btn.classList.remove('active');
     });
-    document.querySelector(`[data-period="${period}"]`).classList.add('active');
+    const activeBtn = document.querySelector(`[data-period="${period}"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
     
     // Re-render charts with new period
     renderCharts();
-    
-    // Update overview stats for new period
     renderOverviewStats();
 }
 
 // Filter data by current period
 function filterDataByPeriod(data) {
+    if (!data || data.length === 0) return [];
+    
     if (currentPeriod === 'all') return data;
     
     const cutoffDate = new Date();
@@ -484,6 +522,44 @@ function exportChart(chartId) {
         a.click();
         
         showToast('Chart exported successfully', 'success');
+    } else {
+        showToast('No hay gráfico para exportar', 'warning');
+    }
+}
+
+// Manual scraping function for analytics page
+async function runScraping() {
+    try {
+        showToast('Scraping iniciado', 'Ejecutando scraping para generar datos analíticos...', 'info');
+        
+        const response = await fetch('/api/scrape', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                test: false,
+                notify: true
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('Scraping completado', `${result.totalProducts || 0} productos procesados`, 'success');
+            
+            // Reload analytics data after successful scraping
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+            
+        } else {
+            throw new Error(result.error || 'Error desconocido en el scraping');
+        }
+        
+    } catch (error) {
+        console.error('Scraping error:', error);
+        showToast('Error en scraping', error.message, 'error');
     }
 }
 
@@ -501,26 +577,62 @@ function setupEventListeners() {
     // Refresh data button if it exists
     const refreshBtn = document.getElementById('refresh-data');
     if (refreshBtn) {
-        refreshBtn.addEventListener('click', loadAnalyticsData);
+        refreshBtn.addEventListener('click', loadRealAnalyticsData);
     }
-    
-    // Auto-refresh every 5 minutes
-    setInterval(loadAnalyticsData, 5 * 60 * 1000);
 }
 
 // Loading states
-function showLoading() {
-    const loadingElements = document.querySelectorAll('.loading-spinner');
-    loadingElements.forEach(el => el.style.display = 'flex');
+function showLoadingState() {
+    document.body.classList.add('loading');
+    
+    const mainContent = document.querySelector('.analytics-container');
+    if (mainContent) {
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'loading-overlay';
+        loadingOverlay.innerHTML = `
+            <div class="loading-content">
+                <div class="loading-spinner large"></div>
+                <p>Cargando datos analíticos reales...</p>
+            </div>
+        `;
+        mainContent.appendChild(loadingOverlay);
+    }
 }
 
-function hideLoading() {
-    const loadingElements = document.querySelectorAll('.loading-spinner');
-    loadingElements.forEach(el => el.style.display = 'none');
+function hideLoadingState() {
+    document.body.classList.remove('loading');
+    
+    const loadingOverlay = document.querySelector('.loading-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.remove();
+    }
+}
+
+// Error state
+function showErrorState(message) {
+    const mainContent = document.querySelector('.analytics-container');
+    if (mainContent) {
+        mainContent.innerHTML = `
+            <div class="error-state">
+                <div class="error-icon">❌</div>
+                <h2>Error de Conexión</h2>
+                <p>${message}</p>
+                <div class="error-actions">
+                    <button onclick="location.reload()" class="btn btn-primary btn-large">
+                        🔄 Reintentar
+                    </button>
+                    <a href="/index.html" class="btn btn-secondary btn-large">
+                        ← Volver al Dashboard
+                    </a>
+                </div>
+            </div>
+        `;
+    }
 }
 
 // Utility functions
 function formatDateShort(dateStr) {
+    if (!dateStr) return 'N/A';
     return new Date(dateStr).toLocaleDateString('es-AR', { 
         month: 'short', 
         day: 'numeric' 
@@ -528,7 +640,7 @@ function formatDateShort(dateStr) {
 }
 
 function formatNumber(num) {
-    return new Intl.NumberFormat('es-AR').format(num);
+    return new Intl.NumberFormat('es-AR').format(num || 0);
 }
 
 function formatPrice(price) {
@@ -536,21 +648,32 @@ function formatPrice(price) {
         style: 'currency',
         currency: 'ARS',
         minimumFractionDigits: 0
-    }).format(price);
+    }).format(price || 0);
 }
 
 // Toast notifications
-function showToast(message, type = 'info') {
+function showToast(title, message, type = 'info') {
     if (typeof window.showToast === 'function') {
-        window.showToast(message, type);
+        window.showToast(title, message, type);
     } else {
-        console.log(`Toast: ${message}`);
+        console.log(`${type.toUpperCase()}: ${title} - ${message}`);
     }
 }
 
-// Global export for analytics functionality
+// Global exports for analytics functionality
 window.analyticsApp = {
-    loadAnalyticsData,
+    loadRealAnalyticsData,
     changeDateFilter,
-    exportChart
+    exportChart,
+    runScraping
 };
+
+// Global functions for onclick handlers
+window.changeDateFilter = changeDateFilter;
+window.exportChart = exportChart;
+window.runScraping = runScraping;
+
+// No more mock data generation
+// No more fake time series
+// No more simulated insights
+// Only real data from APIs

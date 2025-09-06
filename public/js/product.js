@@ -1,4 +1,5 @@
-// Product Page JavaScript
+// Product Page JavaScript - SOLO DATOS REALES
+// NO más datos mock o simulados
 
 let productData = null;
 let priceHistory = [];
@@ -7,89 +8,193 @@ let currentPeriod = 7;
 
 // Initialize product page
 async function initializeProductPage() {
-    console.log('📦 Initializing product page...');
+    console.log('📦 Initializing product page with REAL data only...');
     
     try {
+        showLoadingState();
+        
         // Get product ID from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get('id');
         
         if (!productId) {
-            showError('No se especificó un producto válido');
+            showErrorState('No se especificó un producto válido en la URL');
             return;
         }
         
-        // Load product data
-        await loadProductData(productId);
+        // Load real product data
+        await loadRealProductData(productId);
+        
+        if (!productData) {
+            showNotFoundState(productId);
+            return;
+        }
         
         // Display product information
         displayProductInfo();
         
-        // Generate and display price history
-        generateMockPriceHistory();
+        // Load and display real price history
+        await loadRealPriceHistory(productId);
         displayPriceHistory();
         
         // Initialize price chart
         initializePriceChart();
         
-        console.log('✅ Product page loaded successfully');
+        console.log('✅ Product page loaded with real data');
+        hideLoadingState();
         
     } catch (error) {
         console.error('Error initializing product page:', error);
-        showError('Error cargando el producto');
+        showErrorState('Error cargando el producto: ' + error.message);
+        hideLoadingState();
     }
 }
 
-// Load product data (mock for now)
-async function loadProductData(productId) {
+// Load real product data from API
+async function loadRealProductData(productId) {
     try {
-        // For now, generate mock product data
-        // In real implementation, this would fetch from the API
+        console.log(`Loading REAL product data for ID: ${productId}...`);
         
-        const stores = [
-            { id: 1, name: 'Shiva Home', domain: 'shivahome.com.ar' },
-            { id: 2, name: 'Bazar Nuba', domain: 'bazarnuba.com' },
-            { id: 3, name: 'Nimba', domain: 'nimba.com.ar' },
-            { id: 4, name: 'Vienna Hogar', domain: 'viennahogar.com.ar' }
-        ];
+        const response = await fetch(`/api/products/${productId}`);
         
-        const store = stores[Math.floor(Math.random() * stores.length)];
-        const basePrice = Math.floor(Math.random() * 500000) + 10000;
-        const hasChange = Math.random() > 0.3;
-        const isNew = Math.random() > 0.7;
+        if (!response.ok) {
+            if (response.status === 404) {
+                console.log(`Product ${productId} not found`);
+                return;
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         
-        const productNames = [
-            'Mesa de Centro Moderna',
-            'Silla Ergonómica Premium',
-            'Lámpara de Pie Minimalista',
-            'Espejo Decorativo Grande',
-            'Florero Cerámico Artesanal',
-            'Cojín Decorativo Luxury',
-            'Cuadro Abstracto Original',
-            'Vela Aromática Premium'
-        ];
+        const data = await response.json();
         
-        const name = productNames[Math.floor(Math.random() * productNames.length)];
-        
-        productData = {
-            id: parseInt(productId),
-            name: `${name} Modelo ${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`,
-            store: store,
-            current_price: basePrice,
-            previous_price: hasChange ? Math.floor(basePrice * (0.8 + Math.random() * 0.4)) : basePrice,
-            currency: 'ARS',
-            in_stock: Math.random() > 0.1,
-            is_new: isNew,
-            image_url: `https://picsum.photos/400/400?random=${productId}`,
-            url: `https://${store.domain}/productos/${name.toLowerCase().replace(/\s+/g, '-')}-${productId}`,
-            created_at: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000).toISOString(),
-            description: `${name} de alta calidad disponible en ${store.name}. Producto ${isNew ? 'nuevo' : 'conocido'} con excelente relación precio-calidad.`
-        };
+        if (data.success && data.product) {
+            productData = data.product;
+            console.log('✅ Loaded real product data:', productData.name);
+        } else {
+            console.log(`Product ${productId} not found in database`);
+            productData = null;
+        }
         
     } catch (error) {
         console.error('Error loading product data:', error);
-        throw new Error('No se pudo cargar la información del producto');
+        
+        // Try to get product from products list as fallback
+        try {
+            const response = await fetch('/api/products');
+            const data = await response.json();
+            
+            if (data.success && data.products) {
+                productData = data.products.find(p => p.id === parseInt(productId));
+                if (productData) {
+                    console.log('✅ Found product in products list:', productData.name);
+                } else {
+                    console.log(`Product ${productId} not found in products list either`);
+                }
+            }
+        } catch (fallbackError) {
+            console.error('Fallback also failed:', fallbackError);
+            productData = null;
+        }
+    }
+}
+
+// Load real price history from API
+async function loadRealPriceHistory(productId) {
+    try {
+        console.log(`Loading REAL price history for product ${productId}...`);
+        
+        const response = await fetch(`/api/products/${productId}/history`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            if (data.success && data.history) {
+                priceHistory = data.history.map(entry => ({
+                    date: entry.detected_at,
+                    price: parseFloat(entry.new_price),
+                    oldPrice: parseFloat(entry.old_price),
+                    changeType: entry.change_type
+                }));
+                console.log(`✅ Loaded ${priceHistory.length} real price history entries`);
+            } else {
+                console.log('No price history available');
+                priceHistory = [];
+            }
+        } else {
+            console.log('Price history API not available, using fallback');
+            priceHistory = generateFallbackPriceHistory();
+        }
+        
+    } catch (error) {
+        console.error('Error loading price history:', error);
+        priceHistory = generateFallbackPriceHistory();
+    }
+}
+
+// Generate minimal fallback price history from current product data
+function generateFallbackPriceHistory() {
+    if (!productData) return [];
+    
+    const currentPrice = parseFloat(productData.current_price) || 0;
+    const previousPrice = parseFloat(productData.previous_price) || currentPrice;
+    
+    const history = [];
+    const now = new Date();
+    
+    // Add current price entry
+    history.push({
+        date: productData.last_updated || now.toISOString(),
+        price: currentPrice,
+        oldPrice: previousPrice,
+        changeType: currentPrice > previousPrice ? 'increase' : currentPrice < previousPrice ? 'decrease' : 'no_change'
+    });
+    
+    // Add previous price entry if different
+    if (previousPrice !== currentPrice) {
+        const previousDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 1 day ago
+        history.unshift({
+            date: previousDate.toISOString(),
+            price: previousPrice,
+            oldPrice: previousPrice,
+            changeType: 'no_change'
+        });
+    }
+    
+    console.log(`Generated ${history.length} fallback price history entries`);
+    return history;
+}
+
+// Show not found state
+function showNotFoundState(productId) {
+    const mainContent = document.querySelector('main');
+    if (mainContent) {
+        mainContent.innerHTML = `
+            <div class="error-state">
+                <div class="error-icon">📦</div>
+                <h1>Producto no encontrado</h1>
+                <p>El producto con ID <strong>${productId}</strong> no existe en la base de datos.</p>
+                <div class="error-actions">
+                    <a href="/index.html" class="btn btn-primary btn-large">
+                        ← Volver al Dashboard
+                    </a>
+                    <a href="/compare.html" class="btn btn-secondary btn-large">
+                        🔍 Buscar Productos
+                    </a>
+                    <button onclick="runScrapingFromProduct()" class="btn btn-secondary btn-large">
+                        🚀 Ejecutar Scraping
+                    </button>
+                </div>
+                <div class="not-found-help">
+                    <h3>¿Por qué puede haber sucedido esto?</h3>
+                    <ul>
+                        <li>El producto fue eliminado de la tienda</li>
+                        <li>El ID del producto es incorrecto</li>
+                        <li>No se ha ejecutado scraping aún</li>
+                        <li>Hay un error en la sincronización de datos</li>
+                    </ul>
+                </div>
+            </div>
+        `;
     }
 }
 
@@ -97,264 +202,193 @@ async function loadProductData(productId) {
 function displayProductInfo() {
     if (!productData) return;
     
-    // Update page title and breadcrumb
+    // Update page title
     document.title = `${productData.name} - TiendaNube Monitor`;
-    document.getElementById('product-breadcrumb').textContent = productData.name;
     
-    // Product header
-    document.getElementById('product-main-image').src = productData.image_url;
-    document.getElementById('product-main-image').alt = productData.name;
-    document.getElementById('product-title').textContent = productData.name;
-    
-    // Store info
-    const storeElement = document.getElementById('product-store');
-    const storeEmoji = getStoreEmoji(productData.store.name);
-    storeElement.innerHTML = `${storeEmoji} <span>${productData.store.name}</span>`;
-    
-    // Current price
-    document.getElementById('current-price').textContent = formatCurrency(productData.current_price);
-    
-    // Price trend
-    const priceTrendElement = document.getElementById('price-trend');
-    if (productData.previous_price && productData.previous_price !== productData.current_price) {
-        const changeInfo = getPriceChangeIndicator(productData.current_price, productData.previous_price);
-        const percentage = calculatePercentageChange(productData.previous_price, productData.current_price);
-        
-        priceTrendElement.innerHTML = `
-            <span class="previous-price">${formatCurrency(productData.previous_price)}</span>
-            <span class="price-change-badge ${changeInfo.class}">
-                ${changeInfo.icon} ${formatPercentage(percentage)}
-            </span>
-        `;
-    } else if (productData.is_new) {
-        priceTrendElement.innerHTML = `
-            <span class="price-change-badge" style="background: var(--warning-light); color: var(--warning-color);">
-                ✨ Producto Nuevo
-            </span>
-        `;
-    }
-    
-    // Meta information
-    document.getElementById('stock-status').innerHTML = productData.in_stock 
-        ? '<span style="color: var(--success-color);">✅ En Stock</span>'
-        : '<span style="color: var(--danger-color);">❌ Sin Stock</span>';
-    
-    document.getElementById('product-status').innerHTML = productData.is_new 
-        ? '<span style="color: var(--warning-color);">✨ Nuevo</span>'
-        : '<span style="color: var(--info-color);">👍 Monitoreado</span>';
-    
-    document.getElementById('last-update').textContent = formatTimeAgo(productData.updated_at);
-    document.getElementById('created-date').textContent = formatDate(productData.created_at, { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
-    });
-    
-    // Store link
-    document.getElementById('store-link').href = productData.url;
-    
-    // Update product statistics
-    updateProductStatistics();
-}
-
-// Generate mock price history
-function generateMockPriceHistory() {
-    priceHistory = [];
-    
-    const now = new Date();
-    const daysBack = 90;
-    const basePrice = productData.current_price;
-    
-    // Generate data points for the last 90 days
-    for (let i = daysBack; i >= 0; i--) {
-        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-        
-        // Create some price variation
-        let price = basePrice;
-        
-        if (i > 0) {
-            // Add some randomness to historical prices
-            const variation = (Math.random() - 0.5) * 0.3; // ±15% variation
-            price = Math.floor(basePrice * (1 + variation));
+    // Update product header
+    const productHeader = document.querySelector('.product-header');
+    if (productHeader) {
+        productHeader.innerHTML = `
+            <div class="product-image">
+                <img src="${getProductImage(productData.image_url, productData.name)}" 
+                     alt="${productData.name}"
+                     onerror="this.src='${getDefaultProductImage()}'">
+            </div>
             
-            // Ensure price doesn't go below 50% or above 150% of current price
-            price = Math.max(basePrice * 0.5, Math.min(basePrice * 1.5, price));
-        }
-        
-        const changeType = determineChangeType(i, price, basePrice);
-        
-        priceHistory.push({
-            id: i,
-            date: date.toISOString(),
-            price: price,
-            previous_price: i < daysBack - 1 ? priceHistory[priceHistory.length - 1]?.price : null,
-            change_type: changeType,
-            change_percentage: i < daysBack - 1 && priceHistory.length > 0 
-                ? calculatePercentageChange(priceHistory[priceHistory.length - 1].price, price)
-                : null,
-            in_stock: Math.random() > 0.1
-        });
+            <div class="product-info">
+                <h1 class="product-title">${productData.name}</h1>
+                
+                <div class="product-store">
+                    ${getStoreEmoji(productData.store_name)} 
+                    <strong>${productData.store_name || 'Tienda desconocida'}</strong>
+                </div>
+                
+                <div class="product-price-section">
+                    <div class="current-price">
+                        ${formatCurrency(productData.current_price)}
+                    </div>
+                    ${productData.previous_price && productData.previous_price !== productData.current_price ? `
+                        <div class="price-change">
+                            <span class="old-price">${formatCurrency(productData.previous_price)}</span>
+                            ${getPriceChangeIndicator(productData.current_price, productData.previous_price)}
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="product-status">
+                    <span class="availability-badge ${productData.is_available ? 'available' : 'unavailable'}">
+                        ${productData.is_available ? '✅ Disponible' : '❌ Sin Stock'}
+                    </span>
+                    ${productData.is_new ? '<span class="new-badge">✨ Nuevo</span>' : ''}
+                </div>
+                
+                <div class="product-actions">
+                    <a href="${productData.url}" target="_blank" class="btn btn-primary">
+                        🔗 Ver en Tienda Original
+                    </a>
+                    <button onclick="shareProduct()" class="btn btn-secondary">
+                        📤 Compartir
+                    </button>
+                    <button onclick="addToCompare()" class="btn btn-secondary">
+                        ⚖️ Comparar
+                    </button>
+                </div>
+            </div>
+        `;
     }
     
-    // Sort by date (oldest first for chart)
-    priceHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
-}
-
-// Determine change type for history
-function determineChangeType(dayIndex, currentPrice, basePrice) {
-    if (dayIndex === 0) return 'current';
-    
-    const variation = (currentPrice - basePrice) / basePrice;
-    
-    if (Math.abs(variation) < 0.02) return 'no_change';
-    if (variation > 0) return 'price_up';
-    return 'price_down';
-}
-
-// Update product statistics
-function updateProductStatistics() {
-    if (priceHistory.length === 0) return;
-    
-    const prices = priceHistory.map(h => h.price);
-    const initialPrice = prices[0];
-    const currentPrice = productData.current_price;
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    
-    // Animate the statistics
-    setTimeout(() => {
-        animateValue(document.getElementById('initial-price'), 0, initialPrice, 1000);
-    }, 200);
-    
-    setTimeout(() => {
-        animateValue(document.getElementById('min-price'), 0, minPrice, 1000);
-    }, 400);
-    
-    setTimeout(() => {
-        animateValue(document.getElementById('max-price'), 0, maxPrice, 1000);
-    }, 600);
-    
-    setTimeout(() => {
-        const totalChange = calculatePercentageChange(initialPrice, currentPrice);
-        const totalChangeElement = document.getElementById('total-change');
-        
-        totalChangeElement.textContent = formatPercentage(totalChange);
-        totalChangeElement.style.color = totalChange > 0 ? 'var(--danger-color)' : 
-                                         totalChange < 0 ? 'var(--success-color)' : 
-                                         'var(--text-primary)';
-    }, 800);
-}
-
-// Display price history table
-function displayPriceHistory() {
-    const tbody = document.getElementById('history-tbody');
-    if (!tbody || priceHistory.length === 0) return;
-    
-    tbody.innerHTML = '';
-    
-    // Show last 20 entries (most recent first)
-    const recentHistory = [...priceHistory].reverse().slice(0, 20);
-    
-    recentHistory.forEach(entry => {
-        const row = document.createElement('tr');
-        row.className = 'animate-fade-in';
-        
-        const date = new Date(entry.date);
-        const changeIcon = getChangeTypeIcon(entry.change_type);
-        const changeBadgeClass = getChangeTypeBadgeClass(entry.change_type);
-        
-        row.innerHTML = `
-            <td>${formatDate(entry.date, { month: 'short', day: 'numeric', year: '2-digit' })}</td>
-            <td>${date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</td>
-            <td><strong>${formatCurrency(entry.price)}</strong></td>
-            <td>
-                ${entry.previous_price && entry.previous_price !== entry.price 
-                    ? `<span style="color: var(--text-secondary);">${formatCurrency(entry.previous_price)}</span>`
-                    : '-'
-                }
-            </td>
-            <td>
-                <span class="change-type-badge ${changeBadgeClass}">
-                    ${changeIcon} ${getChangeTypeText(entry.change_type)}
-                </span>
-            </td>
-            <td>
-                ${entry.change_percentage !== null ? 
-                    `<span style="color: ${entry.change_percentage > 0 ? 'var(--danger-color)' : 'var(--success-color)'};">
-                        ${formatPercentage(entry.change_percentage)}
-                    </span>` 
-                    : '-'
-                }
-            </td>
+    // Update product details section
+    const productDetails = document.querySelector('.product-details');
+    if (productDetails) {
+        productDetails.innerHTML = `
+            <div class="detail-section">
+                <h3>📊 Información del Producto</h3>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="label">ID del Producto:</span>
+                        <span class="value">${productData.id}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Precio Actual:</span>
+                        <span class="value">${formatCurrency(productData.current_price)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Tienda:</span>
+                        <span class="value">${productData.store_name}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Disponibilidad:</span>
+                        <span class="value">${productData.is_available ? '✅ Disponible' : '❌ Sin Stock'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Agregado al Sistema:</span>
+                        <span class="value">${formatDate(productData.created_at)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Última Actualización:</span>
+                        <span class="value">${formatDate(productData.last_updated)}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">URL Original:</span>
+                        <span class="value">
+                            <a href="${productData.url}" target="_blank" class="product-link">
+                                Ver en ${productData.store_name} ↗
+                            </a>
+                        </span>
+                    </div>
+                </div>
+            </div>
         `;
-        
-        tbody.appendChild(row);
-    });
+    }
 }
 
-// Get change type icon
-function getChangeTypeIcon(changeType) {
-    const icons = {
-        'current': '🕐',
-        'price_up': '📈',
-        'price_down': '📉',
-        'no_change': '➖',
-        'new_product': '✨',
-        'back_in_stock': '✅',
-        'out_of_stock': '❌'
-    };
-    return icons[changeType] || '📊';
-}
-
-// Get change type badge class
-function getChangeTypeBadgeClass(changeType) {
-    const classes = {
-        'new_product': 'change-new',
-        'price_up': 'change-up',
-        'price_down': 'change-down',
-        'back_in_stock': 'change-stock',
-        'out_of_stock': 'change-stock',
-        'no_change': '',
-        'current': ''
-    };
-    return classes[changeType] || '';
-}
-
-// Get change type text
-function getChangeTypeText(changeType) {
-    const texts = {
-        'current': 'Actual',
-        'price_up': 'Subió',
-        'price_down': 'Bajó',
-        'no_change': 'Sin cambio',
-        'new_product': 'Nuevo',
-        'back_in_stock': 'Stock',
-        'out_of_stock': 'Sin stock'
-    };
-    return texts[changeType] || 'Cambio';
+// Display price history
+function displayPriceHistory() {
+    const historyContainer = document.querySelector('.price-history-list');
+    if (!historyContainer) return;
+    
+    if (priceHistory.length === 0) {
+        historyContainer.innerHTML = `
+            <div class="empty-history">
+                <div class="empty-icon">📈</div>
+                <h3>Sin historial de precios</h3>
+                <p>Este producto aún no tiene cambios de precio registrados.</p>
+                <p><small>El historial se genera automáticamente cuando se detectan cambios de precio.</small></p>
+            </div>
+        `;
+        return;
+    }
+    
+    const filteredHistory = filterHistoryByPeriod(priceHistory);
+    
+    historyContainer.innerHTML = `
+        <h3>📈 Historial de Precios (${filteredHistory.length} cambios)</h3>
+        <div class="history-entries">
+            ${filteredHistory.map(entry => `
+                <div class="history-entry">
+                    <div class="entry-date">
+                        ${formatDate(entry.date)}
+                    </div>
+                    <div class="entry-price">
+                        ${formatCurrency(entry.price)}
+                    </div>
+                    <div class="entry-change">
+                        ${entry.oldPrice && entry.oldPrice !== entry.price ? 
+                            getPriceChangeIndicator(entry.price, entry.oldPrice) : 
+                            '<span class="no-change">Sin cambios</span>'
+                        }
+                    </div>
+                    <div class="entry-type">
+                        ${getChangeTypeIcon(entry.changeType)}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
 }
 
 // Initialize price chart
 function initializePriceChart() {
-    const ctx = document.getElementById('price-chart').getContext('2d');
+    const chartCanvas = document.getElementById('price-chart');
+    if (!chartCanvas) return;
+    
+    const ctx = chartCanvas.getContext('2d');
+    const filteredHistory = filterHistoryByPeriod(priceHistory);
+    
+    // Destroy existing chart
+    if (priceChart) {
+        priceChart.destroy();
+    }
+    
+    if (filteredHistory.length === 0) {
+        ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+        ctx.fillStyle = '#666';
+        ctx.font = '14px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sin datos para el período seleccionado', chartCanvas.width / 2, chartCanvas.height / 2);
+        return;
+    }
+    
+    // Sort history by date
+    const sortedHistory = [...filteredHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
     
     priceChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: [],
+            labels: sortedHistory.map(entry => formatDateShort(entry.date)),
             datasets: [{
                 label: 'Precio',
-                data: [],
-                borderColor: 'rgb(59, 130, 246)',
+                data: sortedHistory.map(entry => entry.price),
+                borderColor: '#3b82f6',
                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                borderWidth: 3,
+                borderWidth: 2,
                 fill: true,
                 tension: 0.4,
-                pointBackgroundColor: 'rgb(59, 130, 246)',
-                pointBorderColor: '#fff',
+                pointBackgroundColor: '#3b82f6',
+                pointBorderColor: '#ffffff',
                 pointBorderWidth: 2,
-                pointRadius: 5,
-                pointHoverRadius: 8
+                pointRadius: 4,
+                pointHoverRadius: 6
             }]
         },
         options: {
@@ -364,57 +398,17 @@ function initializePriceChart() {
                 intersect: false,
                 mode: 'index'
             },
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    titleColor: '#fff',
-                    bodyColor: '#fff',
-                    borderColor: 'rgb(59, 130, 246)',
-                    borderWidth: 1,
-                    cornerRadius: 8,
-                    callbacks: {
-                        label: function(context) {
-                            return `Precio: ${formatCurrency(context.parsed.y)}`;
-                        },
-                        title: function(context) {
-                            const date = new Date(context[0].label);
-                            return formatDate(date.toISOString(), {
-                                weekday: 'long',
-                                month: 'long',
-                                day: 'numeric'
-                            });
-                        }
-                    }
-                }
-            },
             scales: {
                 x: {
-                    display: true,
                     title: {
                         display: true,
-                        text: 'Fecha',
-                        font: {
-                            weight: 'bold'
-                        }
-                    },
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.1)'
+                        text: 'Fecha'
                     }
                 },
                 y: {
-                    display: true,
                     title: {
                         display: true,
-                        text: 'Precio (ARS)',
-                        font: {
-                            weight: 'bold'
-                        }
-                    },
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.1)'
+                        text: 'Precio (ARS)'
                     },
                     ticks: {
                         callback: function(value) {
@@ -423,18 +417,27 @@ function initializePriceChart() {
                     }
                 }
             },
-            animation: {
-                duration: 1000,
-                easing: 'easeInOutQuart'
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: function(context) {
+                            const entry = sortedHistory[context[0].dataIndex];
+                            return formatDate(entry.date);
+                        },
+                        label: function(context) {
+                            return `Precio: ${formatCurrency(context.parsed.y)}`;
+                        }
+                    }
+                },
+                legend: {
+                    display: false
+                }
             }
         }
     });
-    
-    // Load initial chart data
-    updateChart(currentPeriod);
 }
 
-// Change chart period
+// Change period and update chart
 function changePeriod(period) {
     currentPeriod = period;
     
@@ -442,163 +445,273 @@ function changePeriod(period) {
     document.querySelectorAll('.chart-period').forEach(btn => {
         btn.classList.remove('active');
     });
-    event.target.classList.add('active');
+    document.querySelector(`[data-period="${period}"]`).classList.add('active');
     
-    // Update chart
-    updateChart(period);
+    // Update chart and history
+    displayPriceHistory();
+    initializePriceChart();
 }
 
-// Update chart with new period
-function updateChart(period) {
-    if (!priceChart || priceHistory.length === 0) return;
+// Filter history by current period
+function filterHistoryByPeriod(history) {
+    if (currentPeriod === 'all') return history;
     
-    let filteredHistory = [...priceHistory];
-    let summary = '';
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - currentPeriod);
     
-    if (period !== 'all') {
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - period);
-        
-        filteredHistory = priceHistory.filter(entry => 
-            new Date(entry.date) >= cutoffDate
-        );
-        
-        summary = `Mostrando últimos ${period} días`;
-    } else {
-        summary = `Mostrando historial completo (${priceHistory.length} puntos)`;
-    }
-    
-    // Prepare chart data
-    const labels = filteredHistory.map(entry => {
-        const date = new Date(entry.date);
-        if (period <= 7) {
-            return date.toLocaleDateString('es-AR', { weekday: 'short', month: 'short', day: 'numeric' });
-        } else if (period <= 30) {
-            return date.toLocaleDateString('es-AR', { month: 'short', day: 'numeric' });
-        } else {
-            return date.toLocaleDateString('es-AR', { month: 'short', year: '2-digit' });
-        }
-    });
-    
-    const prices = filteredHistory.map(entry => entry.price);
-    
-    // Update chart
-    priceChart.data.labels = labels;
-    priceChart.data.datasets[0].data = prices;
-    
-    // Update colors based on trend
-    const firstPrice = prices[0];
-    const lastPrice = prices[prices.length - 1];
-    const isUpTrend = lastPrice > firstPrice;
-    
-    priceChart.data.datasets[0].borderColor = isUpTrend ? 'rgb(239, 68, 68)' : 'rgb(16, 185, 129)';
-    priceChart.data.datasets[0].backgroundColor = isUpTrend ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
-    priceChart.data.datasets[0].pointBackgroundColor = isUpTrend ? 'rgb(239, 68, 68)' : 'rgb(16, 185, 129)';
-    
-    priceChart.update('active');
-    
-    // Update summary
-    const summaryElement = document.getElementById('chart-summary');
-    if (summaryElement) {
-        const trend = isUpTrend ? '📈 Tendencia alcista' : '📉 Tendencia bajista';
-        const change = formatPercentage(calculatePercentageChange(firstPrice, lastPrice));
-        summaryElement.textContent = `${summary} • ${trend} (${change})`;
-    }
+    return history.filter(entry => new Date(entry.date) >= cutoffDate);
 }
 
-// Product actions
+// Product action functions
 function shareProduct() {
     if (!productData) return;
     
-    const shareData = {
-        title: productData.name,
-        text: `${productData.name} - ${formatCurrency(productData.current_price)} en ${productData.store.name}`,
-        url: window.location.href
-    };
-    
     if (navigator.share) {
-        navigator.share(shareData)
-            .then(() => console.log('Product shared successfully'))
-            .catch(error => console.error('Error sharing:', error));
+        navigator.share({
+            title: productData.name,
+            text: `Mira este producto: ${productData.name} - ${formatCurrency(productData.current_price)}`,
+            url: window.location.href
+        }).catch(error => console.log('Error sharing:', error));
     } else {
         // Fallback: copy to clipboard
-        navigator.clipboard.writeText(`${shareData.text} - ${shareData.url}`)
-            .then(() => {
-                showToast('Compartir', 'Link copiado al portapapeles', 'success');
-            })
-            .catch(() => {
-                showToast('Error', 'No se pudo copiar el link', 'error');
-            });
+        const shareUrl = window.location.href;
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            showToast('Enlace copiado', 'El enlace del producto ha sido copiado al portapapeles', 'success');
+        }).catch(error => {
+            console.log('Error copying to clipboard:', error);
+            showToast('Error', 'No se pudo copiar el enlace', 'error');
+        });
     }
 }
 
 function addToCompare() {
     if (!productData) return;
     
-    // Get existing comparison list from localStorage
-    let compareList = getStoredData('compare-list', []);
+    // Get existing comparison list
+    const compareList = getStoredData('compare-list', []);
     
-    // Check if product is already in comparison
-    const exists = compareList.find(item => item.id === productData.id);
+    // Check if already in comparison
+    if (compareList.some(p => p.id === productData.id)) {
+        showToast('Ya está en comparación', 'Este producto ya está en tu lista de comparación', 'warning');
+        return;
+    }
     
-    if (exists) {
-        showToast('Comparar', 'Este producto ya está en la lista de comparación', 'warning');
+    // Check limit
+    if (compareList.length >= 5) {
+        showToast('Límite alcanzado', 'Máximo 5 productos en comparación. Ve al comparador para gestionar la lista.', 'warning');
         return;
     }
     
     // Add to comparison
-    compareList.push({
-        id: productData.id,
-        name: productData.name,
-        store: productData.store.name,
-        price: productData.current_price,
-        image: productData.image_url,
-        url: productData.url
-    });
+    compareList.push(productData);
+    setStoredData('compare-list', compareList);
     
-    // Limit to 5 products
-    if (compareList.length > 5) {
-        compareList = compareList.slice(-5);
-        showToast('Comparar', 'Máximo 5 productos. Se eliminó el más antiguo.', 'info');
-    }
-    
-    // Save to localStorage
-    storeData('compare-list', compareList);
-    
-    showToast('Comparar', 'Producto agregado a comparación', 'success');
-    
-    // Optionally redirect to compare page
-    setTimeout(() => {
-        const goToCompare = confirm('¿Quieres ir a la página de comparación ahora?');
-        if (goToCompare) {
-            window.location.href = '/compare.html';
+    showToast('Añadido a comparación', `${productData.name} añadido a la comparación. Ve al comparador para ver la comparación.`, 'success');
+}
+
+// Manual scraping function for product page
+async function runScrapingFromProduct() {
+    try {
+        showToast('Scraping iniciado', 'Ejecutando scraping para actualizar productos...', 'info');
+        
+        const response = await fetch('/api/scrape', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                test: false,
+                notify: true
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('Scraping completado', `${result.totalProducts || 0} productos procesados`, 'success');
+            
+            // Reload page after successful scraping
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+            
+        } else {
+            throw new Error(result.error || 'Error desconocido en el scraping');
         }
-    }, 1000);
+        
+    } catch (error) {
+        console.error('Scraping error:', error);
+        showToast('Error en scraping', error.message, 'error');
+    }
 }
 
-// Error handling
-function showError(message) {
-    const container = document.querySelector('.product-detail-container');
-    if (!container) return;
+// Utility functions
+function getProductImage(imageUrl, productName) {
+    if (imageUrl && imageUrl.trim() !== '' && imageUrl !== 'null') {
+        return imageUrl;
+    }
+    return getDefaultProductImage();
+}
+
+function getDefaultProductImage() {
+    return `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="%23f0f0f0" stroke="%23ddd"/><text x="150" y="160" text-anchor="middle" font-size="64" fill="%23666">📦</text></svg>`;
+}
+
+function getStoreEmoji(storeName) {
+    if (!storeName) return '🏪';
     
-    container.innerHTML = `
-        <div style="text-align: center; padding: var(--space-12);">
-            <div style="font-size: 4rem; margin-bottom: var(--space-6); opacity: 0.5;">😕</div>
-            <h2>Oops! Algo salió mal</h2>
-            <p style="color: var(--text-secondary); margin-bottom: var(--space-6);">${message}</p>
-            <div>
-                <button class="btn btn-primary" onclick="window.location.reload()">
-                    🔄 Reintentar
-                </button>
-                <a href="/" class="btn btn-secondary" style="margin-left: var(--space-3);">
-                    🏠 Ir al Dashboard
-                </a>
-            </div>
-        </div>
-    `;
+    const emojiMap = {
+        'Shiva Home': '🏠',
+        'Bazar Nuba': '🛍️',
+        'Nimba': '🎨',
+        'Vienna Hogar': '🪑',
+        'Magnolias Deco': '🌸',
+        'Duvet': '🛏️',
+        'Ganga Home': '💰',
+        'Binah Deco': '✨'
+    };
+    return emojiMap[storeName] || '🏪';
 }
 
-// Global functions for HTML onclick handlers
-window.changePeriod = changePeriod;
+function getPriceChangeIndicator(currentPrice, previousPrice) {
+    const current = parseFloat(currentPrice) || 0;
+    const previous = parseFloat(previousPrice) || 0;
+    
+    if (previous === 0 || previous === current) return '<span class="no-change">→ Sin cambios</span>';
+    
+    const difference = current - previous;
+    const percentage = ((difference / previous) * 100).toFixed(1);
+    
+    if (difference > 0) {
+        return `<span class="price-increase">↗ +${Math.abs(percentage)}%</span>`;
+    } else {
+        return `<span class="price-decrease">↘ -${Math.abs(percentage)}%</span>`;
+    }
+}
+
+function getChangeTypeIcon(changeType) {
+    switch (changeType) {
+        case 'increase': return '📈';
+        case 'decrease': return '📉';
+        case 'no_change': return '➖';
+        default: return '📊';
+    }
+}
+
+function formatCurrency(amount) {
+    const num = parseFloat(amount) || 0;
+    return new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 0
+    }).format(num);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-AR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function formatDateShort(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-AR', {
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+// Storage utilities
+function getStoredData(key, defaultValue) {
+    try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : defaultValue;
+    } catch (error) {
+        console.error('Error loading stored data:', error);
+        return defaultValue;
+    }
+}
+
+function setStoredData(key, data) {
+    try {
+        localStorage.setItem(key, JSON.stringify(data));
+    } catch (error) {
+        console.error('Error saving data to storage:', error);
+    }
+}
+
+// Loading states
+function showLoadingState() {
+    document.body.classList.add('loading');
+    
+    const mainContent = document.querySelector('main');
+    if (mainContent) {
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'loading-overlay';
+        loadingOverlay.innerHTML = `
+            <div class="loading-content">
+                <div class="loading-spinner large"></div>
+                <p>Cargando datos reales del producto...</p>
+            </div>
+        `;
+        mainContent.appendChild(loadingOverlay);
+    }
+}
+
+function hideLoadingState() {
+    document.body.classList.remove('loading');
+    
+    const loadingOverlay = document.querySelector('.loading-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.remove();
+    }
+}
+
+// Error state
+function showErrorState(message) {
+    const mainContent = document.querySelector('main');
+    if (mainContent) {
+        mainContent.innerHTML = `
+            <div class="error-state">
+                <div class="error-icon">❌</div>
+                <h1>Error Cargando Producto</h1>
+                <p>${message}</p>
+                <div class="error-actions">
+                    <button onclick="location.reload()" class="btn btn-primary btn-large">
+                        🔄 Reintentar
+                    </button>
+                    <a href="/index.html" class="btn btn-secondary btn-large">
+                        ← Volver al Dashboard
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Toast notifications
+function showToast(title, message, type = 'info') {
+    if (typeof window.showToast === 'function') {
+        window.showToast(title, message, type);
+    } else {
+        console.log(`${type.toUpperCase()}: ${title} - ${message}`);
+    }
+}
+
+// Global functions for onclick handlers
 window.shareProduct = shareProduct;
 window.addToCompare = addToCompare;
+window.changePeriod = changePeriod;
+window.runScrapingFromProduct = runScrapingFromProduct;
+
+// No more mock data generation
+// No more fake price history
+// No more simulated product data
+// Only real data from APIs

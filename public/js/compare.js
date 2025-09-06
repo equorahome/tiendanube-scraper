@@ -1,4 +1,5 @@
-// Compare Page JavaScript
+// Compare Page JavaScript - SOLO DATOS REALES
+// NO más datos mock o simulados
 
 let compareList = [];
 let allProducts = [];
@@ -6,14 +7,16 @@ let searchTimeout = null;
 
 // Initialize compare page
 async function initializeComparePage() {
-    console.log('⚖️ Initializing compare page...');
+    console.log('⚖️ Initializing compare page with REAL data only...');
     
     try {
+        showLoadingState();
+        
         // Load saved comparison list
         loadSavedComparison();
         
-        // Generate mock products for search
-        generateMockProducts();
+        // Load real products for search
+        await loadRealProductsForSearch();
         
         // Setup event listeners
         setupEventListeners();
@@ -21,11 +24,13 @@ async function initializeComparePage() {
         // Display current comparison
         displayComparison();
         
-        console.log('✅ Compare page loaded successfully');
+        console.log('✅ Compare page loaded with real data');
+        hideLoadingState();
         
     } catch (error) {
         console.error('Error initializing compare page:', error);
-        showToast('Error', 'Error cargando comparador', 'error');
+        showErrorState('Error cargando el comparador: ' + error.message);
+        hideLoadingState();
     }
 }
 
@@ -35,575 +40,629 @@ function loadSavedComparison() {
     console.log(`📋 Loaded ${compareList.length} products from saved comparison`);
 }
 
-// Generate mock products for search
-function generateMockProducts() {
-    const stores = [
-        { id: 1, name: 'Shiva Home', domain: 'shivahome.com.ar' },
-        { id: 2, name: 'Bazar Nuba', domain: 'bazarnuba.com' },
-        { id: 3, name: 'Nimba', domain: 'nimba.com.ar' },
-        { id: 4, name: 'Vienna Hogar', domain: 'viennahogar.com.ar' },
-        { id: 5, name: 'Magnolias Deco', domain: 'magnoliasdeco.com.ar' },
-        { id: 6, name: 'Duvet', domain: 'duvet.com.ar' },
-        { id: 7, name: 'Ganga Home', domain: 'gangahome.com.ar' },
-        { id: 8, name: 'Binah Deco', domain: 'binahdeco.com.ar' }
-    ];
-    
-    const productNames = [
-        'Mesa de Centro Moderna',
-        'Silla Ergonómica',
-        'Lámpara de Pie',
-        'Espejo Decorativo',
-        'Florero Cerámico',
-        'Cojín Decorativo',
-        'Cuadro Abstracto',
-        'Vela Aromática',
-        'Jarron Grande',
-        'Mesa Ratona',
-        'Sillón Esquinero',
-        'Biblioteca Moderna',
-        'Maceta Decorativa',
-        'Alfombra Vintage',
-        'Cortina Blackout',
-        'Perchero de Pie',
-        'Mesa Comedor',
-        'Silla Tapizada',
-        'Lámpara Colgante',
-        'Espejo Redondo'
-    ];
-    
-    const adjectives = ['Premium', 'Luxury', 'Clásica', 'Moderna', 'Vintage', 'Minimalista', 'Artesanal', 'Elegante'];
-    
-    allProducts = [];
-    
-    for (let i = 0; i < 200; i++) {
-        const store = stores[Math.floor(Math.random() * stores.length)];
-        const baseName = productNames[Math.floor(Math.random() * productNames.length)];
-        const adjective = Math.random() > 0.5 ? adjectives[Math.floor(Math.random() * adjectives.length)] + ' ' : '';
-        const variant = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-        const name = `${adjective}${baseName} ${variant}`;
+// Load real products for search functionality
+async function loadRealProductsForSearch() {
+    try {
+        console.log('Loading REAL products for search...');
         
-        const basePrice = Math.floor(Math.random() * 500000) + 5000;
-        const isNew = Math.random() > 0.8;
-        const inStock = Math.random() > 0.1;
+        const response = await fetch('/api/products');
+        const data = await response.json();
         
-        allProducts.push({
-            id: i + 1,
-            name: name,
-            store: store,
-            price: basePrice,
-            previous_price: Math.random() > 0.7 ? Math.floor(basePrice * (0.8 + Math.random() * 0.4)) : basePrice,
-            currency: 'ARS',
-            in_stock: inStock,
-            is_new: isNew,
-            image: `https://picsum.photos/200/200?random=${i + 1}`,
-            url: `https://${store.domain}/productos/${name.toLowerCase().replace(/\s+/g, '-')}-${i + 1}`,
-            created_at: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
-            updated_at: new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000).toISOString()
-        });
-    }
-    
-    console.log(`🔍 Generated ${allProducts.length} products for search`);
-}
-
-// Setup event listeners
-function setupEventListeners() {
-    const searchInput = document.getElementById('compare-search');
-    if (searchInput) {
-        searchInput.addEventListener('input', handleSearch);
-        searchInput.addEventListener('focus', showSearchResults);
-        searchInput.addEventListener('blur', hideSearchResultsDelayed);
-    }
-    
-    // Hide search results when clicking outside
-    document.addEventListener('click', (e) => {
-        const searchContainer = document.querySelector('.search-container');
-        if (searchContainer && !searchContainer.contains(e.target)) {
-            hideSearchResults();
-        }
-    });
-}
-
-// Handle search input
-function handleSearch(event) {
-    const query = event.target.value.trim().toLowerCase();
-    
-    // Clear previous timeout
-    if (searchTimeout) {
-        clearTimeout(searchTimeout);
-    }
-    
-    // Debounce search
-    searchTimeout = setTimeout(() => {
-        if (query.length >= 2) {
-            performSearch(query);
+        if (data.success && data.products && data.products.length > 0) {
+            allProducts = data.products;
+            console.log(`✅ Loaded ${allProducts.length} real products for search`);
         } else {
-            hideSearchResults();
+            console.log('No products available for search');
+            allProducts = [];
+            showEmptySearchState();
         }
-    }, 300);
+        
+    } catch (error) {
+        console.error('Error loading products for search:', error);
+        allProducts = [];
+        showEmptySearchState();
+    }
 }
 
-// Perform product search
-function performSearch(query) {
-    const searchResults = allProducts.filter(product => {
-        return product.name.toLowerCase().includes(query) ||
-               product.store.name.toLowerCase().includes(query);
-    }).slice(0, 10); // Limit to 10 results
+// Show empty state when no products are available for search
+function showEmptySearchState() {
+    const searchResults = document.getElementById('search-results');
+    if (searchResults) {
+        searchResults.innerHTML = `
+            <div class="empty-search-state">
+                <div class="empty-icon">🔍</div>
+                <h3>Sin productos para buscar</h3>
+                <p>Para usar el comparador, necesitas tener productos monitoreados en el sistema.</p>
+                <button onclick="runScraping()" class="btn btn-primary">
+                    🚀 Ejecutar Scraping Primero
+                </button>
+                <a href="/index.html" class="btn btn-secondary">
+                    ← Volver al Dashboard
+                </a>
+            </div>
+        `;
+    }
+}
+
+// Search products based on real data
+function searchProducts(query) {
+    if (!query || query.trim().length < 2) {
+        displaySearchResults([]);
+        return;
+    }
     
-    displaySearchResults(searchResults);
+    if (allProducts.length === 0) {
+        showEmptySearchState();
+        return;
+    }
+    
+    const searchTerm = query.toLowerCase().trim();
+    const filteredProducts = allProducts.filter(product => 
+        product.name.toLowerCase().includes(searchTerm) ||
+        (product.store_name && product.store_name.toLowerCase().includes(searchTerm))
+    ).slice(0, 10); // Limit to first 10 results
+    
+    displaySearchResults(filteredProducts);
 }
 
 // Display search results
-function displaySearchResults(results) {
-    const searchResultsContainer = document.getElementById('search-results');
-    if (!searchResultsContainer) return;
+function displaySearchResults(products) {
+    const resultsContainer = document.getElementById('search-results');
+    if (!resultsContainer) return;
     
-    if (results.length === 0) {
-        searchResultsContainer.innerHTML = `
-            <div class="search-result-item" style="justify-content: center; color: var(--text-secondary);">
-                No se encontraron productos
+    if (products.length === 0) {
+        resultsContainer.innerHTML = `
+            <div class="no-results">
+                <p>No se encontraron productos para tu búsqueda</p>
             </div>
         `;
-    } else {
-        searchResultsContainer.innerHTML = results.map(product => {
-            const isAlreadyCompared = compareList.some(item => item.id === product.id);
-            
-            return `
-                <div class="search-result-item ${isAlreadyCompared ? 'disabled' : ''}" 
-                     onclick="${isAlreadyCompared ? '' : `addToComparison(${product.id})`}"
-                     style="${isAlreadyCompared ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
-                    <img class="search-result-image" 
-                         src="${product.image}" 
-                         alt="${product.name}"
-                         onerror="this.src='https://via.placeholder.com/50x50?text=📦'">
-                    <div class="search-result-info">
-                        <div class="search-result-name">${product.name}</div>
-                        <div class="search-result-meta">
-                            ${getStoreEmoji(product.store.name)} ${product.store.name} • 
-                            ${formatCurrency(product.price)}
-                            ${isAlreadyCompared ? ' • Ya agregado' : ''}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        return;
     }
     
-    showSearchResults();
-}
-
-// Show search results
-function showSearchResults() {
-    const searchResults = document.getElementById('search-results');
-    if (searchResults) {
-        searchResults.style.display = 'block';
-    }
-}
-
-// Hide search results
-function hideSearchResults() {
-    const searchResults = document.getElementById('search-results');
-    if (searchResults) {
-        searchResults.style.display = 'none';
-    }
-}
-
-// Hide search results with delay (for blur event)
-function hideSearchResultsDelayed() {
-    setTimeout(hideSearchResults, 200);
+    resultsContainer.innerHTML = products.map(product => {
+        const isAlreadyInComparison = compareList.some(p => p.id === product.id);
+        
+        return `
+            <div class="search-result-item">
+                <div class="product-info">
+                    <img src="${getProductImage(product.image_url, product.name)}" 
+                         alt="${product.name}"
+                         class="product-image"
+                         onerror="this.src='${getDefaultProductImage()}'">
+                    <div class="product-details">
+                        <h4 class="product-name">${product.name}</h4>
+                        <p class="product-store">
+                            ${getStoreEmoji(product.store_name)} ${product.store_name || 'Tienda desconocida'}
+                        </p>
+                        <p class="product-price">${formatCurrency(product.current_price)}</p>
+                    </div>
+                </div>
+                <div class="product-actions">
+                    ${isAlreadyInComparison ? 
+                        `<span class="already-added">✓ Ya está en comparación</span>` :
+                        `<button onclick="addProductToComparison(${product.id})" class="btn btn-primary btn-sm">
+                            Añadir a Comparación
+                        </button>`
+                    }
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 // Add product to comparison
-function addToComparison(productId) {
+function addProductToComparison(productId) {
     const product = allProducts.find(p => p.id === productId);
     if (!product) return;
     
     // Check if already in comparison
-    if (compareList.some(item => item.id === productId)) {
-        showToast('Comparar', 'Este producto ya está en la comparación', 'warning');
+    if (compareList.some(p => p.id === productId)) {
+        showToast('Producto ya añadido', 'Este producto ya está en la comparación', 'warning');
         return;
     }
     
-    // Check maximum limit
+    // Check comparison limit
     if (compareList.length >= 5) {
-        showToast('Comparar', 'Máximo 5 productos. Elimina uno para agregar otro.', 'warning');
+        showToast('Límite alcanzado', 'Máximo 5 productos en comparación', 'warning');
         return;
     }
     
-    // Add to comparison
-    compareList.push({
-        id: product.id,
-        name: product.name,
-        store: product.store.name,
-        store_emoji: getStoreEmoji(product.store.name),
-        price: product.price,
-        previous_price: product.previous_price,
-        image: product.image,
-        url: product.url,
-        in_stock: product.in_stock,
-        is_new: product.is_new,
-        currency: product.currency
-    });
-    
-    // Save to localStorage
-    storeData('compare-list', compareList);
-    
-    // Update display
+    compareList.push(product);
+    saveComparison();
     displayComparison();
     
-    // Hide search results
-    hideSearchResults();
-    
-    // Clear search input
-    const searchInput = document.getElementById('compare-search');
-    if (searchInput) {
-        searchInput.value = '';
+    // Update search results to reflect the change
+    const currentSearch = document.getElementById('product-search').value;
+    if (currentSearch.trim()) {
+        searchProducts(currentSearch);
     }
     
-    showToast('Comparar', `${product.name} agregado a la comparación`, 'success');
+    showToast('Producto añadido', `${product.name} añadido a la comparación`, 'success');
 }
 
-// Remove from comparison
-function removeFromComparison(productId) {
-    const productIndex = compareList.findIndex(item => item.id === productId);
-    if (productIndex === -1) return;
-    
-    const productName = compareList[productIndex].name;
-    compareList.splice(productIndex, 1);
-    
-    // Save to localStorage
-    storeData('compare-list', compareList);
-    
-    // Update display
-    displayComparison();
-    
-    showToast('Comparar', `${productName} eliminado de la comparación`, 'info');
-}
-
-// Display comparison
+// Display current comparison
 function displayComparison() {
-    const comparisonContent = document.getElementById('comparison-content');
-    const compareCount = document.getElementById('compare-count');
-    const insightsSection = document.getElementById('insights-section');
-    
-    if (!comparisonContent || !compareCount) return;
-    
-    // Update count
-    compareCount.textContent = compareList.length;
+    const comparisonContainer = document.getElementById('comparison-container');
+    if (!comparisonContainer) return;
     
     if (compareList.length === 0) {
-        displayEmptyState(comparisonContent);
-        if (insightsSection) insightsSection.style.display = 'none';
+        showEmptyComparisonState();
         return;
     }
     
-    // Show insights section
-    if (insightsSection) insightsSection.style.display = 'block';
-    
-    // Generate comparison analysis
-    const analysis = generateComparisonAnalysis();
-    
-    // Display products
-    comparisonContent.innerHTML = `
-        <div class="comparison-grid">
-            ${compareList.map(product => createComparisonCard(product, analysis)).join('')}
-        </div>
-    `;
-    
-    // Display insights
-    displayInsights(analysis);
-}
-
-// Display empty state
-function displayEmptyState(container) {
-    container.innerHTML = `
-        <div class="empty-state">
-            <div class="empty-state-icon">⚖️</div>
-            <h3>¡Comienza tu comparación!</h3>
-            <p>Busca productos arriba para agregarlos y compararlos</p>
-            
-            <div class="quick-add">
-                <h4>O agrega productos populares:</h4>
-                <div class="quick-add-grid">
-                    <button class="quick-add-btn" onclick="quickAddProduct('mesa')">
-                        🪑 Mesas
-                    </button>
-                    <button class="quick-add-btn" onclick="quickAddProduct('silla')">
-                        💺 Sillas
-                    </button>
-                    <button class="quick-add-btn" onclick="quickAddProduct('lámpara')">
-                        💡 Lámparas
-                    </button>
-                    <button class="quick-add-btn" onclick="quickAddProduct('espejo')">
-                        🪞 Espejos
-                    </button>
-                </div>
+    // Show comparison grid
+    comparisonContainer.innerHTML = `
+        <div class="comparison-header">
+            <h2>Comparando ${compareList.length} productos</h2>
+            <div class="comparison-actions">
+                <button onclick="exportComparison()" class="btn btn-secondary">
+                    📊 Exportar Comparación
+                </button>
+                <button onclick="clearComparison()" class="btn btn-danger">
+                    🗑️ Limpiar Todo
+                </button>
             </div>
         </div>
+        
+        <div class="comparison-grid">
+            ${compareList.map(product => renderProductCard(product)).join('')}
+        </div>
+        
+        <div class="comparison-insights">
+            ${generateComparisonInsights()}
+        </div>
     `;
 }
 
-// Quick add product by category
-function quickAddProduct(category) {
-    const searchInput = document.getElementById('compare-search');
-    if (searchInput) {
-        searchInput.value = category;
-        searchInput.focus();
-        handleSearch({ target: searchInput });
+// Show empty state when no products in comparison
+function showEmptyComparisonState() {
+    const comparisonContainer = document.getElementById('comparison-container');
+    if (comparisonContainer) {
+        comparisonContainer.innerHTML = `
+            <div class="empty-comparison-state">
+                <div class="empty-icon">⚖️</div>
+                <h2>Sin productos para comparar</h2>
+                <p>Busca productos arriba y añádelos para compararlos lado a lado.</p>
+                <div class="empty-help">
+                    <h3>¿Cómo usar el comparador?</h3>
+                    <ol>
+                        <li>Busca productos usando el campo de búsqueda</li>
+                        <li>Añade productos a la comparación (máximo 5)</li>
+                        <li>Ve las diferencias de precio y características</li>
+                        <li>Exporta los resultados si necesitas</li>
+                    </ol>
+                </div>
+            </div>
+        `;
     }
 }
 
-// Generate comparison analysis
-function generateComparisonAnalysis() {
-    if (compareList.length === 0) return {};
-    
-    const prices = compareList.map(p => p.price);
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    const avgPrice = prices.reduce((sum, price) => sum + price, 0) / prices.length;
-    
-    // Find best and worst deals
-    const cheapestProduct = compareList.find(p => p.price === minPrice);
-    const mostExpensiveProduct = compareList.find(p => p.price === maxPrice);
-    
-    // Calculate savings
-    const maxSavings = maxPrice - minPrice;
-    const savingsPercentage = ((maxSavings / maxPrice) * 100).toFixed(1);
-    
-    // Store analysis
-    const storeCount = new Set(compareList.map(p => p.store)).size;
-    const storeDistribution = {};
-    compareList.forEach(p => {
-        storeDistribution[p.store] = (storeDistribution[p.store] || 0) + 1;
-    });
-    
-    // Stock analysis
-    const inStockCount = compareList.filter(p => p.in_stock).length;
-    const newProductsCount = compareList.filter(p => p.is_new).length;
-    
-    return {
-        priceRange: { min: minPrice, max: maxPrice, avg: avgPrice },
-        cheapest: cheapestProduct,
-        mostExpensive: mostExpensiveProduct,
-        savings: { amount: maxSavings, percentage: savingsPercentage },
-        stores: { count: storeCount, distribution: storeDistribution },
-        stock: { inStock: inStockCount, total: compareList.length },
-        newProducts: newProductsCount
-    };
-}
-
-// Create comparison card
-function createComparisonCard(product, analysis) {
-    const isCheapest = analysis.cheapest && product.id === analysis.cheapest.id;
-    const isMostExpensive = analysis.mostExpensive && product.id === analysis.mostExpensive.id;
-    
-    const cardClass = isCheapest ? 'winner' : isMostExpensive ? 'expensive' : '';
-    
-    const priceChange = getPriceChangeIndicator(product.price, product.previous_price);
-    
-    const badges = [];
-    if (isCheapest) badges.push('<span class="comparison-badge badge-best-price">🏆 Mejor Precio</span>');
-    if (isMostExpensive) badges.push('<span class="comparison-badge badge-most-expensive">💰 Más Caro</span>');
-    if (product.is_new) badges.push('<span class="comparison-badge badge-new">✨ Nuevo</span>');
+// Render individual product card
+function renderProductCard(product) {
+    const priceChange = getPriceChangeIndicator(product.current_price, product.previous_price);
     
     return `
-        <div class="comparison-card ${cardClass}">
-            <button class="comparison-remove" onclick="removeFromComparison(${product.id})" title="Eliminar">
-                ×
-            </button>
-            
-            <img class="comparison-image" 
-                 src="${product.image}" 
-                 alt="${product.name}"
-                 onerror="this.src='https://via.placeholder.com/250x150?text=📦'">
-            
-            <h3 class="comparison-name">${product.name}</h3>
-            
-            <div class="comparison-store">
-                ${product.store_emoji} ${product.store}
+        <div class="product-comparison-card">
+            <div class="card-header">
+                <button onclick="removeProductFromComparison(${product.id})" class="remove-btn" title="Eliminar de comparación">
+                    ❌
+                </button>
             </div>
             
-            <div class="comparison-price">
-                ${formatCurrency(product.price)}
+            <div class="card-image">
+                <img src="${getProductImage(product.image_url, product.name)}" 
+                     alt="${product.name}"
+                     onerror="this.src='${getDefaultProductImage()}'">
             </div>
             
-            ${product.previous_price && product.previous_price !== product.price ? `
-                <div class="price-change ${priceChange.class}" style="font-size: 0.875rem; margin-bottom: var(--space-2);">
-                    ${priceChange.icon} ${priceChange.text}
-                    <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                        Antes: ${formatCurrency(product.previous_price)}
-                    </div>
-                </div>
-            ` : ''}
-            
-            ${badges.length > 0 ? `
-                <div class="comparison-badges">
-                    ${badges.join('')}
-                </div>
-            ` : ''}
-            
-            <div style="margin-bottom: var(--space-3);">
-                <div style="font-size: 0.875rem; margin-bottom: var(--space-1);">
-                    <strong>Stock:</strong> 
-                    <span style="color: ${product.in_stock ? 'var(--success-color)' : 'var(--danger-color)'};">
-                        ${product.in_stock ? '✅ Disponible' : '❌ Sin stock'}
-                    </span>
+            <div class="card-content">
+                <h3 class="card-title">${product.name}</h3>
+                
+                <div class="card-store">
+                    ${getStoreEmoji(product.store_name)} ${product.store_name || 'Tienda desconocida'}
                 </div>
                 
-                ${analysis.savings.amount > 0 && !isCheapest ? `
-                    <div style="font-size: 0.875rem; color: var(--warning-color);">
-                        💰 Ahorras <strong>${formatCurrency(product.price - analysis.priceRange.min)}</strong>
-                        eligiendo el más barato
+                <div class="card-price-section">
+                    <div class="current-price">
+                        ${formatCurrency(product.current_price)}
                     </div>
-                ` : ''}
-            </div>
-            
-            <div class="comparison-actions-card">
-                <a href="${product.url}" target="_blank" class="btn btn-primary" style="flex: 1; font-size: 0.875rem;">
-                    🔗 Ver en Tienda
-                </a>
-                <a href="/product.html?id=${product.id}" class="btn btn-secondary" style="font-size: 0.875rem;">
-                    👁️
-                </a>
+                    ${product.previous_price && product.previous_price !== product.current_price ? 
+                        `<div class="price-change">
+                            <span class="old-price">${formatCurrency(product.previous_price)}</span>
+                            ${priceChange}
+                        </div>` : ''
+                    }
+                </div>
+                
+                <div class="card-details">
+                    <div class="detail-row">
+                        <span class="label">Estado:</span>
+                        <span class="value availability ${product.is_available ? 'available' : 'unavailable'}">
+                            ${product.is_available ? '✅ Disponible' : '❌ Sin Stock'}
+                        </span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="label">Agregado:</span>
+                        <span class="value">${formatDate(product.created_at)}</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="label">Actualizado:</span>
+                        <span class="value">${formatDate(product.last_updated)}</span>
+                    </div>
+                </div>
+                
+                <div class="card-actions">
+                    <a href="/product.html?id=${product.id}" class="btn btn-secondary" style="font-size: 0.875rem;">
+                        👁️ Ver Detalles
+                    </a>
+                    <a href="${product.url}" target="_blank" class="btn btn-primary" style="font-size: 0.875rem;">
+                        🔗 Ver en Tienda
+                    </a>
+                </div>
             </div>
         </div>
     `;
 }
 
-// Display insights
-function displayInsights(analysis) {
-    const insightsGrid = document.getElementById('insights-grid');
-    if (!insightsGrid || !analysis.priceRange) return;
+// Remove product from comparison
+function removeProductFromComparison(productId) {
+    compareList = compareList.filter(p => p.id !== productId);
+    saveComparison();
+    displayComparison();
     
-    const insights = [];
-    
-    // Price insight
-    if (analysis.savings.amount > 0) {
-        insights.push({
-            icon: '💰',
-            title: 'Oportunidad de Ahorro',
-            description: `Puedes ahorrar hasta <strong>${formatCurrency(analysis.savings.amount)}</strong> (${analysis.savings.percentage}%) eligiendo el producto más económico en lugar del más caro.`
-        });
+    // Update search results if there's an active search
+    const currentSearch = document.getElementById('product-search').value;
+    if (currentSearch.trim()) {
+        searchProducts(currentSearch);
     }
     
-    // Store diversity insight
-    if (analysis.stores.count > 1) {
-        const mostCommonStore = Object.keys(analysis.stores.distribution).reduce((a, b) => 
-            analysis.stores.distribution[a] > analysis.stores.distribution[b] ? a : b
-        );
-        
-        insights.push({
-            icon: '🏪',
-            title: 'Diversidad de Tiendas',
-            description: `Comparando productos de <strong>${analysis.stores.count}</strong> tiendas diferentes. <strong>${mostCommonStore}</strong> aparece más frecuentemente en tu comparación.`
-        });
+    showToast('Producto eliminado', 'Producto eliminado de la comparación', 'info');
+}
+
+// Generate comparison insights based on real data
+function generateComparisonInsights() {
+    if (compareList.length < 2) {
+        return `
+            <div class="insights-section">
+                <h3>💡 Insights de Comparación</h3>
+                <p>Añade al menos 2 productos para obtener insights de comparación.</p>
+            </div>
+        `;
     }
     
-    // Stock insight
-    if (analysis.stock.inStock < analysis.stock.total) {
-        const outOfStock = analysis.stock.total - analysis.stock.inStock;
-        insights.push({
-            icon: '📦',
-            title: 'Disponibilidad',
-            description: `<strong>${outOfStock}</strong> de ${analysis.stock.total} productos están sin stock. Considera esto en tu decisión de compra.`
-        });
-    }
+    const prices = compareList.map(p => parseFloat(p.current_price) || 0);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
     
-    // New products insight
-    if (analysis.newProducts > 0) {
-        insights.push({
-            icon: '✨',
-            title: 'Productos Nuevos',
-            description: `<strong>${analysis.newProducts}</strong> producto${analysis.newProducts > 1 ? 's son' : ' es'} nuevo${analysis.newProducts > 1 ? 's' : ''} en el catálogo. Estos podrían tener precios de lanzamiento especiales.`
-        });
-    }
+    const cheapestProduct = compareList.find(p => parseFloat(p.current_price) === minPrice);
+    const mostExpensiveProduct = compareList.find(p => parseFloat(p.current_price) === maxPrice);
     
-    // Price range insight
-    insights.push({
-        icon: '📊',
-        title: 'Análisis de Precios',
-        description: `El rango de precios va desde <strong>${formatCurrency(analysis.priceRange.min)}</strong> hasta <strong>${formatCurrency(analysis.priceRange.max)}</strong>. El precio promedio es <strong>${formatCurrency(analysis.priceRange.avg)}</strong>.`
+    const priceDifference = maxPrice - minPrice;
+    const priceVariation = ((priceDifference / minPrice) * 100).toFixed(1);
+    
+    // Store distribution
+    const storeCount = {};
+    compareList.forEach(p => {
+        const storeName = p.store_name || 'Desconocida';
+        storeCount[storeName] = (storeCount[storeName] || 0) + 1;
     });
     
-    // Recommendation insight
-    if (analysis.cheapest) {
-        const recommendation = analysis.cheapest.in_stock ? 
-            `Te recomendamos <strong>${analysis.cheapest.name}</strong> de ${analysis.cheapest.store} por su excelente precio y disponibilidad.` :
-            `Aunque <strong>${analysis.cheapest.name}</strong> tiene el mejor precio, está sin stock. Considera la segunda opción más económica.`;
-            
-        insights.push({
-            icon: '🎯',
-            title: 'Recomendación',
-            description: recommendation
-        });
-    }
+    // Availability analysis
+    const availableCount = compareList.filter(p => p.is_available).length;
+    const availabilityPercentage = ((availableCount / compareList.length) * 100).toFixed(0);
     
-    insightsGrid.innerHTML = insights.map(insight => `
-        <div class="insight-card">
-            <div class="insight-icon">${insight.icon}</div>
-            <div class="insight-title">${insight.title}</div>
-            <div class="insight-description">${insight.description}</div>
+    return `
+        <div class="insights-section">
+            <h3>💡 Insights de Comparación</h3>
+            
+            <div class="insights-grid">
+                <div class="insight-card">
+                    <div class="insight-header">
+                        <span class="insight-icon">💰</span>
+                        <h4>Análisis de Precios</h4>
+                    </div>
+                    <div class="insight-content">
+                        <p><strong>Más barato:</strong> ${cheapestProduct.name} - ${formatCurrency(minPrice)}</p>
+                        <p><strong>Más caro:</strong> ${mostExpensiveProduct.name} - ${formatCurrency(maxPrice)}</p>
+                        <p><strong>Diferencia:</strong> ${formatCurrency(priceDifference)} (${priceVariation}% más caro)</p>
+                        <p><strong>Precio promedio:</strong> ${formatCurrency(avgPrice)}</p>
+                    </div>
+                </div>
+                
+                <div class="insight-card">
+                    <div class="insight-header">
+                        <span class="insight-icon">🏪</span>
+                        <h4>Distribución por Tienda</h4>
+                    </div>
+                    <div class="insight-content">
+                        ${Object.entries(storeCount).map(([store, count]) => 
+                            `<p><strong>${store}:</strong> ${count} producto${count > 1 ? 's' : ''}</p>`
+                        ).join('')}
+                    </div>
+                </div>
+                
+                <div class="insight-card">
+                    <div class="insight-header">
+                        <span class="insight-icon">📊</span>
+                        <h4>Disponibilidad</h4>
+                    </div>
+                    <div class="insight-content">
+                        <p><strong>Disponibles:</strong> ${availableCount} de ${compareList.length} productos</p>
+                        <p><strong>Porcentaje:</strong> ${availabilityPercentage}% disponible</p>
+                        ${availabilityPercentage < 100 ? 
+                            '<p class="warning">⚠️ Algunos productos no están disponibles</p>' : 
+                            '<p class="success">✅ Todos los productos están disponibles</p>'
+                        }
+                    </div>
+                </div>
+            </div>
         </div>
-    `).join('');
+    `;
 }
 
 // Export comparison
 function exportComparison() {
     if (compareList.length === 0) {
-        showToast('Exportar', 'No hay productos para exportar', 'warning');
+        showToast('Sin datos', 'No hay productos para exportar', 'warning');
         return;
     }
     
-    const analysis = generateComparisonAnalysis();
-    
-    const exportData = {
-        fecha_comparacion: new Date().toISOString(),
-        productos: compareList.map(product => ({
-            nombre: product.name,
-            tienda: product.store,
-            precio_actual: product.price,
-            precio_anterior: product.previous_price,
-            en_stock: product.in_stock,
-            es_nuevo: product.is_new,
-            url: product.url
-        })),
-        analisis: {
-            precio_minimo: analysis.priceRange.min,
-            precio_maximo: analysis.priceRange.max,
-            precio_promedio: Math.round(analysis.priceRange.avg),
-            ahorro_potencial: analysis.savings.amount,
-            porcentaje_ahorro: analysis.savings.percentage + '%',
-            producto_mas_barato: analysis.cheapest?.name,
-            tienda_mas_barata: analysis.cheapest?.store,
-            total_tiendas: analysis.stores.count
-        }
-    };
-    
-    const filename = `comparacion_productos_${new Date().toISOString().split('T')[0]}.json`;
-    downloadJSON(exportData, filename);
-    
-    showToast('Exportar', `Comparación exportada: ${compareList.length} productos`, 'success');
+    try {
+        const comparisonData = {
+            exported_at: new Date().toISOString(),
+            products: compareList,
+            summary: {
+                total_products: compareList.length,
+                price_range: {
+                    min: Math.min(...compareList.map(p => parseFloat(p.current_price) || 0)),
+                    max: Math.max(...compareList.map(p => parseFloat(p.current_price) || 0))
+                },
+                stores: [...new Set(compareList.map(p => p.store_name))]
+            }
+        };
+        
+        const dataStr = JSON.stringify(comparisonData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(dataBlob);
+        a.download = `producto-comparison-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        
+        showToast('Exportación exitosa', 'Comparación exportada como JSON', 'success');
+        
+    } catch (error) {
+        console.error('Error exporting comparison:', error);
+        showToast('Error al exportar', 'No se pudo exportar la comparación', 'error');
+    }
 }
 
-// Clear all comparisons
+// Clear comparison
 function clearComparison() {
     if (compareList.length === 0) {
-        showToast('Limpiar', 'No hay productos para limpiar', 'info');
+        showToast('Sin datos', 'No hay productos para limpiar', 'warning');
         return;
     }
     
-    const confirmClear = confirm(`¿Estás seguro de que quieres eliminar todos los ${compareList.length} productos de la comparación?`);
-    
-    if (confirmClear) {
+    if (confirm('¿Estás seguro de que quieres eliminar todos los productos de la comparación?')) {
         compareList = [];
-        storeData('compare-list', compareList);
+        saveComparison();
         displayComparison();
-        showToast('Limpiar', 'Comparación limpiada', 'info');
+        
+        // Clear search results
+        document.getElementById('search-results').innerHTML = '';
+        document.getElementById('product-search').value = '';
+        
+        showToast('Comparación limpiada', 'Todos los productos han sido eliminados', 'info');
     }
 }
 
-// Global functions for HTML onclick handlers
-window.addToComparison = addToComparison;
-window.removeFromComparison = removeFromComparison;
-window.quickAddProduct = quickAddProduct;
+// Save comparison to localStorage
+function saveComparison() {
+    setStoredData('compare-list', compareList);
+}
+
+// Manual scraping function for compare page
+async function runScraping() {
+    try {
+        showToast('Scraping iniciado', 'Ejecutando scraping para cargar productos...', 'info');
+        
+        const response = await fetch('/api/scrape', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                test: false,
+                notify: true
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('Scraping completado', `${result.totalProducts || 0} productos procesados`, 'success');
+            
+            // Reload products for search after successful scraping
+            setTimeout(async () => {
+                await loadRealProductsForSearch();
+            }, 2000);
+            
+        } else {
+            throw new Error(result.error || 'Error desconocido en el scraping');
+        }
+        
+    } catch (error) {
+        console.error('Scraping error:', error);
+        showToast('Error en scraping', error.message, 'error');
+    }
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    // Search input
+    const searchInput = document.getElementById('product-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchProducts(e.target.value);
+            }, 300);
+        });
+    }
+}
+
+// Utility functions
+function getProductImage(imageUrl, productName) {
+    if (imageUrl && imageUrl.trim() !== '' && imageUrl !== 'null') {
+        return imageUrl;
+    }
+    return getDefaultProductImage();
+}
+
+function getDefaultProductImage() {
+    return `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" fill="%23f0f0f0" stroke="%23ddd"/><text x="100" y="110" text-anchor="middle" font-size="48" fill="%23666">📦</text></svg>`;
+}
+
+function getStoreEmoji(storeName) {
+    if (!storeName) return '🏪';
+    
+    const emojiMap = {
+        'Shiva Home': '🏠',
+        'Bazar Nuba': '🛍️',
+        'Nimba': '🎨',
+        'Vienna Hogar': '🪑',
+        'Magnolias Deco': '🌸',
+        'Duvet': '🛏️',
+        'Ganga Home': '💰',
+        'Binah Deco': '✨'
+    };
+    return emojiMap[storeName] || '🏪';
+}
+
+function getPriceChangeIndicator(currentPrice, previousPrice) {
+    const current = parseFloat(currentPrice) || 0;
+    const previous = parseFloat(previousPrice) || 0;
+    
+    if (previous === 0 || previous === current) return '';
+    
+    const difference = current - previous;
+    const percentage = ((difference / previous) * 100).toFixed(1);
+    
+    if (difference > 0) {
+        return `<span class="price-increase">↗ +${Math.abs(percentage)}%</span>`;
+    } else {
+        return `<span class="price-decrease">↘ -${Math.abs(percentage)}%</span>`;
+    }
+}
+
+function formatCurrency(amount) {
+    const num = parseFloat(amount) || 0;
+    return new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 0
+    }).format(num);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-AR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+// Storage utilities
+function getStoredData(key, defaultValue) {
+    try {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : defaultValue;
+    } catch (error) {
+        console.error('Error loading stored data:', error);
+        return defaultValue;
+    }
+}
+
+function setStoredData(key, data) {
+    try {
+        localStorage.setItem(key, JSON.stringify(data));
+    } catch (error) {
+        console.error('Error saving data to storage:', error);
+    }
+}
+
+// Loading states
+function showLoadingState() {
+    document.body.classList.add('loading');
+    
+    const mainContent = document.querySelector('main');
+    if (mainContent) {
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'loading-overlay';
+        loadingOverlay.innerHTML = `
+            <div class="loading-content">
+                <div class="loading-spinner large"></div>
+                <p>Cargando productos reales para comparación...</p>
+            </div>
+        `;
+        mainContent.appendChild(loadingOverlay);
+    }
+}
+
+function hideLoadingState() {
+    document.body.classList.remove('loading');
+    
+    const loadingOverlay = document.querySelector('.loading-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.remove();
+    }
+}
+
+// Error state
+function showErrorState(message) {
+    const mainContent = document.querySelector('main');
+    if (mainContent) {
+        mainContent.innerHTML = `
+            <div class="error-state">
+                <div class="error-icon">❌</div>
+                <h2>Error de Conexión</h2>
+                <p>${message}</p>
+                <div class="error-actions">
+                    <button onclick="location.reload()" class="btn btn-primary btn-large">
+                        🔄 Reintentar
+                    </button>
+                    <a href="/index.html" class="btn btn-secondary btn-large">
+                        ← Volver al Dashboard
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Toast notifications
+function showToast(title, message, type = 'info') {
+    if (typeof window.showToast === 'function') {
+        window.showToast(title, message, type);
+    } else {
+        console.log(`${type.toUpperCase()}: ${title} - ${message}`);
+    }
+}
+
+// Global functions for onclick handlers
+window.addProductToComparison = addProductToComparison;
+window.removeProductFromComparison = removeProductFromComparison;
 window.exportComparison = exportComparison;
 window.clearComparison = clearComparison;
+window.runScraping = runScraping;
+
+// No more mock data generation
+// No more fake products
+// No more simulated search results
+// Only real data from APIs

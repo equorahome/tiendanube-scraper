@@ -1,4 +1,5 @@
-// Dashboard JavaScript
+// Dashboard JavaScript - SOLO DATOS REALES
+// NO más datos mock o simulados
 
 // Global state
 let currentProducts = [];
@@ -7,27 +8,19 @@ let currentSort = { field: 'updated_at', order: 'desc' };
 let currentPage = 1;
 let itemsPerPage = 50;
 let stores = [];
-let stats = {
-    totalProducts: 0,
-    priceChanges: 0,
-    newProducts: 0,
-    bestDiscount: 0
-};
+let isLoading = false;
 
 // Initialize dashboard
 async function initializeDashboard() {
-    console.log('🏠 Initializing dashboard...');
+    console.log('🏠 Initializing dashboard with REAL data only...');
     
     try {
-        performance_monitor.start('dashboard-init');
+        showLoadingState();
         
-        // Load initial data
-        await Promise.all([
-            loadStores(),
-            loadStats(),
-            loadProducts(),
-            loadRecentActivity()
-        ]);
+        // Load only real data from APIs
+        await loadRealStores();
+        await loadRealProducts();
+        await loadRealStats();
         
         // Setup event listeners
         setupEventListeners();
@@ -35,777 +28,613 @@ async function initializeDashboard() {
         // Update last refresh time
         updateLastRefreshTime();
         
-        // Setup auto-refresh
-        setupAutoRefresh();
-        
-        performance_monitor.end('dashboard-init');
-        
-        showToast('Dashboard', 'Dashboard cargado correctamente', 'success');
+        console.log('✅ Dashboard initialized with real data');
         
     } catch (error) {
         console.error('Error initializing dashboard:', error);
-        showToast('Error', 'Error cargando dashboard', 'error');
+        showErrorState('Error cargando el dashboard: ' + error.message);
+    } finally {
+        hideLoadingState();
     }
 }
 
-// Load stores data
-async function loadStores() {
+// Load real stores from API
+async function loadRealStores() {
     try {
-        // For now, use the hardcoded stores from the backend
-        stores = [
-            { id: 1, name: 'Shiva Home', domain: 'shivahome.com.ar' },
-            { id: 2, name: 'Bazar Nuba', domain: 'bazarnuba.com' },
-            { id: 3, name: 'Nimba', domain: 'nimba.com.ar' },
-            { id: 4, name: 'Vienna Hogar', domain: 'viennahogar.com.ar' },
-            { id: 5, name: 'Magnolias Deco', domain: 'magnoliasdeco.com.ar' },
-            { id: 6, name: 'Duvet', domain: 'duvet.com.ar' },
-            { id: 7, name: 'Ganga Home', domain: 'gangahome.com.ar' },
-            { id: 8, name: 'Binah Deco', domain: 'binahdeco.com.ar' }
-        ];
-        
-        populateStoreFilter();
+        // Try to load stores from API - this would be a real endpoint
+        // For now, return empty since we don't have real store data yet
+        stores = [];
+        console.log('Stores loaded:', stores.length);
         
     } catch (error) {
         console.error('Error loading stores:', error);
-        showToast('Error', 'Error cargando tiendas', 'error');
+        stores = [];
     }
 }
 
-// Populate store filter dropdown
-function populateStoreFilter() {
-    const storeFilter = document.getElementById('store-filter');
-    if (!storeFilter) return;
-    
-    // Clear existing options (except first one)
-    while (storeFilter.children.length > 1) {
-        storeFilter.removeChild(storeFilter.lastChild);
-    }
-    
-    stores.forEach(store => {
-        const option = document.createElement('option');
-        option.value = store.id;
-        option.textContent = `${getStoreEmoji(store.name)} ${store.name}`;
-        storeFilter.appendChild(option);
-    });
-}
-
-// Load dashboard stats
-async function loadStats() {
+// Load real products from API
+async function loadRealProducts() {
     try {
-        // For now, generate mock stats
-        stats = {
-            totalProducts: Math.floor(Math.random() * 2000) + 500,
-            priceChanges: Math.floor(Math.random() * 100) + 20,
-            newProducts: Math.floor(Math.random() * 50) + 5,
-            bestDiscount: Math.floor(Math.random() * 50) + 10
-        };
+        console.log('Loading REAL products from API...');
         
-        updateStatsDisplay();
+        const response = await fetch('/api/products');
+        const data = await response.json();
         
-    } catch (error) {
-        console.error('Error loading stats:', error);
-    }
-}
-
-// Update stats display with animation
-function updateStatsDisplay() {
-    const statElements = {
-        'total-products': stats.totalProducts,
-        'price-changes': stats.priceChanges,
-        'new-products': stats.newProducts,
-        'best-discount': `${stats.bestDiscount}%`
-    };
-    
-    Object.entries(statElements).forEach(([id, value]) => {
-        const element = document.getElementById(id);
-        if (element) {
-            const skeleton = element.querySelector('.loading-skeleton');
-            if (skeleton) {
-                skeleton.style.display = 'none';
-            }
-            
-            if (typeof value === 'number') {
-                animateValue(element, 0, value, 1500);
-            } else {
-                element.textContent = value;
-            }
+        if (data.success && data.products && data.products.length > 0) {
+            currentProducts = data.products;
+            console.log(`✅ Loaded ${currentProducts.length} real products`);
+            displayProducts(currentProducts);
+            updateProductCount(currentProducts.length);
+        } else {
+            console.log('No products found in database');
+            currentProducts = [];
+            showEmptyProductsState();
         }
-    });
-    
-    // Update change indicators
-    updateChangeIndicators();
-}
-
-// Update change indicators
-function updateChangeIndicators() {
-    const indicators = [
-        { id: 'products-change', change: Math.floor(Math.random() * 20) + 1 },
-        { id: 'changes-trend', text: 'Últimas 24h' },
-        { id: 'new-trend', text: 'Hoy' },
-        { id: 'discount-store', text: stores[Math.floor(Math.random() * stores.length)]?.name || 'N/A' }
-    ];
-    
-    indicators.forEach(({ id, change, text }) => {
-        const element = document.getElementById(id);
-        if (element) {
-            if (change !== undefined) {
-                const isPositive = Math.random() > 0.3;
-                const icon = isPositive ? '↗' : '↘';
-                const sign = isPositive ? '+' : '-';
-                const className = isPositive ? 'positive' : 'negative';
-                
-                element.innerHTML = `<span class="change-icon">${icon}</span>${sign}${change} hoy`;
-                element.className = `stat-change ${className}`;
-            } else if (text) {
-                element.innerHTML = `<span class="change-icon">${id.includes('discount') ? '🏪' : '🕒'}</span>${text}`;
-            }
-        }
-    });
-}
-
-// Load products (mock data for now)
-async function loadProducts() {
-    try {
-        performance_monitor.start('load-products');
-        
-        // Generate mock products for demonstration
-        currentProducts = generateMockProducts(100);
-        
-        displayProducts();
-        updateResultsCount();
-        setupPagination();
-        
-        performance_monitor.end('load-products');
         
     } catch (error) {
         console.error('Error loading products:', error);
-        showToast('Error', 'Error cargando productos', 'error');
-        displayEmptyState();
+        currentProducts = [];
+        showEmptyProductsState();
     }
 }
 
-// Generate mock products for demo
-function generateMockProducts(count) {
-    const products = [];
-    const productNames = [
-        'Mesa de Centro Moderna', 'Silla Ergonómica', 'Lámpara de Pie', 'Espejo Decorativo',
-        'Florero Ceramico', 'Cojín Decorativo', 'Cuadro Abstracto', 'Vela Aromática',
-        'Jarron Grande', 'Mesa Ratona', 'Sillon Esquinero', 'Biblioteca Moderna',
-        'Maceta Decorativa', 'Alfombra Vintage', 'Cortina Blackout', 'Perchero de Pie'
-    ];
-    
-    for (let i = 0; i < count; i++) {
-        const store = stores[Math.floor(Math.random() * stores.length)];
-        const name = productNames[Math.floor(Math.random() * productNames.length)];
-        const basePrice = Math.floor(Math.random() * 500000) + 10000;
-        const hasChange = Math.random() > 0.7;
-        const isNew = Math.random() > 0.8;
+// Load real stats from API
+async function loadRealStats() {
+    try {
+        console.log('Loading REAL stats from API...');
         
-        products.push({
-            id: i + 1,
-            name: `${name} ${String.fromCharCode(65 + Math.floor(Math.random() * 26))}`,
-            store: store,
-            current_price: basePrice,
-            previous_price: hasChange ? basePrice * (0.8 + Math.random() * 0.4) : basePrice,
-            currency: 'ARS',
-            in_stock: Math.random() > 0.1,
-            is_new: isNew,
-            image_url: `https://picsum.photos/300/300?random=${i}`,
-            url: `https://${store.domain}/productos/${name.toLowerCase().replace(/\s+/g, '-')}-${i}`,
-            updated_at: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-            created_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
+        const response = await fetch('/api/analytics');
+        const data = await response.json();
+        
+        if (data.overview) {
+            updateStatsDisplay({
+                totalProducts: data.overview.totalProducts || 0,
+                avgPrice: data.overview.avgPrice || 0,
+                priceChanges: data.overview.totalPriceChanges || 0,
+                activeStores: data.overview.activeStores || 0
+            });
+        } else {
+            // No real stats available
+            updateStatsDisplay({
+                totalProducts: 0,
+                avgPrice: 0,
+                priceChanges: 0,
+                activeStores: 0
+            });
+        }
+        
+    } catch (error) {
+        console.error('Error loading stats:', error);
+        updateStatsDisplay({
+            totalProducts: 0,
+            avgPrice: 0,
+            priceChanges: 0,
+            activeStores: 0
         });
     }
-    
-    return products;
 }
 
-// Display products in table or cards
-function displayProducts() {
-    const currentView = document.querySelector('.view-btn.active')?.dataset.view || 'table';
-    
-    if (currentView === 'table') {
-        displayProductsTable();
-    } else {
-        displayProductsCards();
-    }
-}
-
-// Display products in table format
-function displayProductsTable() {
+// Show empty state when no products exist
+function showEmptyProductsState() {
     const tbody = document.getElementById('products-tbody');
-    if (!tbody) return;
+    const cardsContainer = document.getElementById('products-cards');
     
-    // Clear loading row
-    tbody.innerHTML = '';
-    
-    if (currentProducts.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="9" class="text-center" style="padding: var(--space-8);">
-                    <div>
-                        <div style="font-size: 3rem; margin-bottom: var(--space-4); opacity: 0.5;">📦</div>
-                        <h3>No se encontraron productos</h3>
-                        <p style="color: var(--text-secondary);">Intenta ajustar los filtros o realizar un nuevo scraping.</p>
-                        <button class="btn btn-primary" onclick="triggerScraping()">Ejecutar Scraping</button>
-                    </div>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    // Get products for current page
-    const start = (currentPage - 1) * itemsPerPage;
-    const end = start + itemsPerPage;
-    const pageProducts = currentProducts.slice(start, end);
-    
-    pageProducts.forEach(product => {
-        const row = createProductRow(product);
-        tbody.appendChild(row);
-    });
-}
-
-// Create table row for product
-function createProductRow(product) {
-    const row = document.createElement('tr');
-    row.className = 'animate-fade-in';
-    
-    const priceChange = getPriceChangeIndicator(product.current_price, product.previous_price);
-    const timeAgo = formatTimeAgo(product.updated_at);
-    
-    row.innerHTML = `
-        <td>
-            <img class="product-image" 
-                 src="${product.image_url}" 
-                 alt="${product.name}"
-                 onerror="this.src='https://via.placeholder.com/60x60?text=📦'">
-        </td>
-        <td>
-            <div class="product-name" title="${product.name}">
-                ${product.name}
-                ${product.is_new ? '<span style="color: var(--warning-color); margin-left: 8px;">✨</span>' : ''}
-            </div>
-        </td>
-        <td>
-            <div class="store-badge">
-                ${getStoreEmoji(product.store.name)} ${product.store.name}
-            </div>
-        </td>
-        <td>
-            <span class="price">${formatCurrency(product.current_price)}</span>
-        </td>
-        <td>
-            <span class="price">${product.previous_price ? formatCurrency(product.previous_price) : 'N/A'}</span>
-        </td>
-        <td>
-            <div class="price-change ${priceChange.class}">
-                <span>${priceChange.icon}</span>
-                <span>${priceChange.text}</span>
-            </div>
-        </td>
-        <td>
-            <span class="stock-badge ${product.in_stock ? 'in-stock' : 'out-of-stock'}">
-                ${product.in_stock ? '✅ En stock' : '❌ Sin stock'}
-            </span>
-        </td>
-        <td>
-            <span title="${formatDate(product.updated_at)}">${timeAgo}</span>
-        </td>
-        <td>
-            <div class="actions-cell">
-                <button class="btn btn-primary action-btn-small" onclick="viewProduct(${product.id})">
-                    👁️ Ver
-                </button>
-                <button class="btn btn-secondary action-btn-small" onclick="openProductUrl('${product.url}')">
-                    🔗 Ir
-                </button>
-            </div>
-        </td>
-    `;
-    
-    return row;
-}
-
-// Display products in cards format
-function displayProductsCards() {
-    const cardsContainer = document.getElementById('products-grid');
-    if (!cardsContainer) return;
-    
-    cardsContainer.innerHTML = '';
-    
-    if (currentProducts.length === 0) {
-        cardsContainer.innerHTML = `
-            <div style="grid-column: 1 / -1; text-align: center; padding: var(--space-8);">
-                <div style="font-size: 4rem; margin-bottom: var(--space-4); opacity: 0.5;">📦</div>
-                <h3>No se encontraron productos</h3>
-                <p style="color: var(--text-secondary);">Intenta ajustar los filtros o realizar un nuevo scraping.</p>
-                <button class="btn btn-primary" onclick="triggerScraping()">Ejecutar Scraping</button>
-            </div>
-        `;
-        return;
-    }
-    
-    // Get products for current page
-    const start = (currentPage - 1) * itemsPerPage;
-    const end = start + itemsPerPage;
-    const pageProducts = currentProducts.slice(start, end);
-    
-    pageProducts.forEach(product => {
-        const card = createProductCard(product);
-        cardsContainer.appendChild(card);
-    });
-}
-
-// Create product card
-function createProductCard(product) {
-    const card = document.createElement('div');
-    card.className = 'product-card animate-scale-in';
-    
-    const priceChange = getPriceChangeIndicator(product.current_price, product.previous_price);
-    const timeAgo = formatTimeAgo(product.updated_at);
-    
-    card.innerHTML = `
-        <img class="product-card-image" 
-             src="${product.image_url}" 
-             alt="${product.name}"
-             onerror="this.src='https://via.placeholder.com/300x200?text=📦'">
-        
-        <div class="product-card-content">
-            <div class="product-card-header">
-                <h3 class="product-card-name">
-                    ${product.name}
-                    ${product.is_new ? ' ✨' : ''}
-                </h3>
-                <div class="product-card-store">
-                    ${getStoreEmoji(product.store.name)} ${product.store.name}
-                </div>
-            </div>
-            
-            <div class="product-card-price">
-                ${formatCurrency(product.current_price)}
-            </div>
-            
-            ${priceChange.text !== 'Nuevo' ? `
-                <div class="price-change ${priceChange.class}" style="margin-bottom: var(--space-3);">
-                    <span>${priceChange.icon}</span>
-                    <span>${priceChange.text}</span>
-                </div>
-            ` : ''}
-            
-            <div class="product-card-meta">
-                <span class="stock-badge ${product.in_stock ? 'in-stock' : 'out-of-stock'}">
-                    ${product.in_stock ? '✅' : '❌'}
-                </span>
-                <span style="font-size: 0.75rem; color: var(--text-tertiary);">${timeAgo}</span>
-            </div>
-            
-            <div style="margin-top: var(--space-4); display: flex; gap: var(--space-2);">
-                <button class="btn btn-primary" onclick="viewProduct(${product.id})" style="flex: 1;">
-                    👁️ Ver Detalles
-                </button>
-                <button class="btn btn-secondary" onclick="openProductUrl('${product.url}')">
-                    🔗
-                </button>
+    const emptyStateHTML = `
+        <div class="empty-state">
+            <div class="empty-icon">📦</div>
+            <h3>No hay productos monitoreados aún</h3>
+            <p>Para comenzar a monitorear productos de TiendaNube, ejecuta el scraping manual.</p>
+            <button onclick="runManualScraping()" class="btn btn-primary btn-large">
+                🚀 Ejecutar Scraping Ahora
+            </button>
+            <div class="empty-help">
+                <p><strong>¿Qué hace el scraping?</strong></p>
+                <ul>
+                    <li>Extrae productos de 8 tiendas de TiendaNube</li>
+                    <li>Monitorea precios y cambios</li>
+                    <li>Detecta productos nuevos</li>
+                    <li>Envía notificaciones de cambios importantes</li>
+                </ul>
             </div>
         </div>
     `;
     
-    return card;
-}
-
-// Setup pagination
-function setupPagination() {
-    const totalPages = Math.ceil(currentProducts.length / itemsPerPage);
-    const paginationContainer = document.getElementById('pagination');
-    
-    if (!paginationContainer || totalPages <= 1) {
-        if (paginationContainer) paginationContainer.innerHTML = '';
-        return;
-    }
-    
-    let paginationHTML = '';
-    
-    // Previous button
-    paginationHTML += `
-        <button ${currentPage === 1 ? 'disabled' : ''} onclick="changePage(${currentPage - 1})">
-            ← Anterior
-        </button>
-    `;
-    
-    // Page numbers
-    const maxVisible = 5;
-    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    let end = Math.min(totalPages, start + maxVisible - 1);
-    
-    if (end - start < maxVisible - 1) {
-        start = Math.max(1, end - maxVisible + 1);
-    }
-    
-    for (let i = start; i <= end; i++) {
-        paginationHTML += `
-            <button class="${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">
-                ${i}
-            </button>
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" style="padding: 0; border: none;">
+                    ${emptyStateHTML}
+                </td>
+            </tr>
         `;
     }
     
-    // Next button
-    paginationHTML += `
-        <button ${currentPage === totalPages ? 'disabled' : ''} onclick="changePage(${currentPage + 1})">
-            Siguiente →
-        </button>
-    `;
+    if (cardsContainer) {
+        cardsContainer.innerHTML = emptyStateHTML;
+    }
     
-    paginationContainer.innerHTML = paginationHTML;
-}
-
-// Change page
-function changePage(page) {
-    if (page < 1 || page > Math.ceil(currentProducts.length / itemsPerPage)) return;
-    
-    currentPage = page;
-    displayProducts();
-    setupPagination();
-    scrollToTop();
-}
-
-// Update results count
-function updateResultsCount() {
-    const countElement = document.getElementById('results-count');
-    if (countElement) {
-        countElement.textContent = formatNumber(currentProducts.length);
+    // Hide filters when empty
+    const filtersSection = document.querySelector('.filters-section');
+    if (filtersSection) {
+        filtersSection.style.display = 'none';
     }
 }
 
-// Load recent activity
-async function loadRecentActivity() {
-    try {
-        const activityList = document.getElementById('activity-list');
-        if (!activityList) return;
-        
-        // Generate mock activity
-        const activities = generateMockActivity(10);
-        
-        activityList.innerHTML = '';
-        
-        activities.forEach(activity => {
-            const item = createElement('div', 'activity-item animate-slide-in');
-            
-            item.innerHTML = `
-                <div class="activity-icon" style="background-color: ${activity.color};">
-                    ${activity.icon}
-                </div>
-                <div class="activity-content">
-                    <div class="activity-title">${activity.title}</div>
-                    <div class="activity-description">${activity.description}</div>
-                    <div class="activity-time">${activity.time}</div>
-                </div>
-            `;
-            
-            activityList.appendChild(item);
-        });
-        
-    } catch (error) {
-        console.error('Error loading activity:', error);
-    }
-}
-
-// Generate mock activity
-function generateMockActivity(count) {
-    const activities = [];
-    const types = [
-        {
-            icon: '📈',
-            color: 'var(--success-light)',
-            title: 'Precio subió',
-            getDescription: () => {
-                const product = currentProducts[Math.floor(Math.random() * currentProducts.length)];
-                return product ? `${product.name} aumentó su precio` : 'Precio actualizado';
-            }
-        },
-        {
-            icon: '📉',
-            color: 'var(--info-light)',
-            title: 'Precio bajó',
-            getDescription: () => {
-                const product = currentProducts[Math.floor(Math.random() * currentProducts.length)];
-                return product ? `${product.name} redujo su precio` : 'Precio actualizado';
-            }
-        },
-        {
-            icon: '✨',
-            color: 'var(--warning-light)',
-            title: 'Producto nuevo',
-            getDescription: () => {
-                const store = stores[Math.floor(Math.random() * stores.length)];
-                return `Nuevo producto encontrado en ${store.name}`;
-            }
-        },
-        {
-            icon: '🔄',
-            color: 'var(--primary-light)',
-            title: 'Scraping completado',
-            getDescription: () => {
-                const count = Math.floor(Math.random() * 50) + 10;
-                return `${count} productos actualizados`;
-            }
-        }
-    ];
-    
-    for (let i = 0; i < count; i++) {
-        const type = types[Math.floor(Math.random() * types.length)];
-        const time = new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000);
-        
-        activities.push({
-            ...type,
-            description: type.getDescription(),
-            time: formatTimeAgo(time.toISOString())
-        });
+// Display real products in table/cards
+function displayProducts(products) {
+    if (!products || products.length === 0) {
+        showEmptyProductsState();
+        return;
     }
     
-    return activities;
-}
-
-// Setup event listeners
-function setupEventListeners() {
-    // Refresh button
-    const refreshBtn = document.getElementById('refresh-btn');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', handleRefresh);
+    // Show filters when we have products
+    const filtersSection = document.querySelector('.filters-section');
+    if (filtersSection) {
+        filtersSection.style.display = 'block';
     }
     
-    // View toggle buttons
-    const viewButtons = document.querySelectorAll('.view-btn');
-    viewButtons.forEach(btn => {
-        btn.addEventListener('click', handleViewToggle);
-    });
+    // Apply current filters and sorting
+    const filteredProducts = applyFiltersAndSort(products);
     
-    // Filter inputs
-    const filterInputs = [
-        'store-filter',
-        'search-filter',
-        'min-price',
-        'max-price',
-        'sort-filter',
-        'only-new',
-        'price-changed',
-        'in-stock'
-    ];
+    // Paginate results
+    const paginatedProducts = paginateProducts(filteredProducts);
     
-    filterInputs.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            const event = element.type === 'checkbox' ? 'change' : 'input';
-            element.addEventListener(event, debounce(handleFilterChange, 300));
-        }
-    });
+    // Render in current view mode
+    const viewMode = document.querySelector('.view-toggle.active')?.dataset.view || 'table';
     
-    // Filter buttons
-    const applyBtn = document.getElementById('apply-filters');
-    const clearBtn = document.getElementById('clear-filters');
-    
-    if (applyBtn) applyBtn.addEventListener('click', applyFilters);
-    if (clearBtn) clearBtn.addEventListener('click', clearFilters);
-    
-    // Table sorting
-    const sortableHeaders = document.querySelectorAll('.products-table th.sortable');
-    sortableHeaders.forEach(header => {
-        header.addEventListener('click', handleSort);
-    });
-}
-
-// Handle refresh
-async function handleRefresh() {
-    const refreshBtn = document.getElementById('refresh-btn');
-    if (!refreshBtn) return;
-    
-    refreshBtn.classList.add('loading');
-    refreshBtn.disabled = true;
-    
-    try {
-        await Promise.all([
-            loadStats(),
-            loadProducts(),
-            loadRecentActivity()
-        ]);
-        
-        updateLastRefreshTime();
-        showToast('Actualizado', 'Datos actualizados correctamente', 'success');
-        
-    } catch (error) {
-        console.error('Error refreshing:', error);
-        showToast('Error', 'Error actualizando datos', 'error');
-    } finally {
-        refreshBtn.classList.remove('loading');
-        refreshBtn.disabled = false;
-    }
-}
-
-// Handle view toggle
-function handleViewToggle(event) {
-    const clickedBtn = event.target;
-    const view = clickedBtn.dataset.view;
-    
-    // Update active state
-    document.querySelectorAll('.view-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    clickedBtn.classList.add('active');
-    
-    // Show/hide views
-    const tableView = document.getElementById('table-view');
-    const cardsView = document.getElementById('cards-view');
-    
-    if (view === 'table') {
-        tableView.style.display = 'block';
-        cardsView.style.display = 'none';
+    if (viewMode === 'table') {
+        displayProductsTable(paginatedProducts);
     } else {
-        tableView.style.display = 'none';
-        cardsView.style.display = 'block';
+        displayProductsCards(paginatedProducts);
     }
     
-    displayProducts();
-    
-    // Store preference
-    storeData('preferred-view', view);
+    // Update pagination
+    updatePagination(filteredProducts.length);
 }
 
-// Handle filter changes
-function handleFilterChange() {
-    currentFilters = {
-        store: document.getElementById('store-filter')?.value || '',
-        search: document.getElementById('search-filter')?.value || '',
-        minPrice: parseFloat(document.getElementById('min-price')?.value) || null,
-        maxPrice: parseFloat(document.getElementById('max-price')?.value) || null,
-        sort: document.getElementById('sort-filter')?.value || 'updated_at-desc',
-        onlyNew: document.getElementById('only-new')?.checked || false,
-        priceChanged: document.getElementById('price-changed')?.checked || false,
-        inStock: document.getElementById('in-stock')?.checked || false
+// Display products in table format
+function displayProductsTable(products) {
+    const tbody = document.getElementById('products-tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = products.map(product => `
+        <tr>
+            <td>
+                <div class="product-info">
+                    <img src="${getProductImage(product.image_url, product.name)}" 
+                         alt="${product.name}"
+                         class="product-image"
+                         onerror="this.src='${getDefaultProductImage()}'">
+                    <div class="product-details">
+                        <div class="product-name">${product.name}</div>
+                        <div class="product-url">
+                            <a href="${product.url}" target="_blank" class="store-link">
+                                ${getStoreEmoji(product.store_name)} ${product.store_name}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <div class="price-display">
+                    <span class="current-price">${formatCurrency(product.current_price)}</span>
+                    ${product.previous_price && product.previous_price !== product.current_price ? 
+                        `<div class="price-change">
+                            <span class="old-price">${formatCurrency(product.previous_price)}</span>
+                            ${getPriceChangeIndicator(product.current_price, product.previous_price)}
+                        </div>` : ''
+                    }
+                </div>
+            </td>
+            <td>
+                <span class="availability-badge ${product.is_available ? 'available' : 'unavailable'}">
+                    ${product.is_available ? '✅ Disponible' : '❌ Sin Stock'}
+                </span>
+            </td>
+            <td>
+                <span class="date-text">${formatDate(product.created_at)}</span>
+            </td>
+            <td>
+                <span class="date-text">${formatDate(product.last_updated)}</span>
+            </td>
+            <td>
+                <div class="actions">
+                    <button class="btn btn-sm btn-primary" onclick="viewProduct(${product.id})" title="Ver detalles">
+                        👁️
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="openProductUrl('${product.url}')" title="Ver en tienda">
+                        🔗
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Display products in cards format
+function displayProductsCards(products) {
+    const container = document.getElementById('products-cards');
+    if (!container) return;
+    
+    container.innerHTML = products.map(product => `
+        <div class="product-card">
+            <div class="product-card-image">
+                <img src="${getProductImage(product.image_url, product.name)}" 
+                     alt="${product.name}"
+                     onerror="this.src='${getDefaultProductImage()}'">
+            </div>
+            <div class="product-card-content">
+                <h3 class="product-card-title">${product.name}</h3>
+                <div class="product-card-store">
+                    ${getStoreEmoji(product.store_name)} ${product.store_name}
+                </div>
+                <div class="product-card-price">
+                    <span class="current-price">${formatCurrency(product.current_price)}</span>
+                    ${product.previous_price && product.previous_price !== product.current_price ? 
+                        `<div class="price-change">
+                            ${getPriceChangeIndicator(product.current_price, product.previous_price)}
+                        </div>` : ''
+                    }
+                </div>
+                <div class="product-card-status">
+                    <span class="availability-badge ${product.is_available ? 'available' : 'unavailable'}">
+                        ${product.is_available ? '✅ Disponible' : '❌ Sin Stock'}
+                    </span>
+                </div>
+                <div class="product-card-actions">
+                    <button class="btn btn-primary" onclick="viewProduct(${product.id})">
+                        Ver Detalles
+                    </button>
+                    <button class="btn btn-secondary" onclick="openProductUrl('${product.url}')">
+                        Ver en Tienda
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Update stats display with real data
+function updateStatsDisplay(stats) {
+    const elements = {
+        totalProducts: document.getElementById('total-products'),
+        avgPrice: document.getElementById('avg-price'),
+        priceChanges: document.getElementById('price-changes'),
+        activeStores: document.getElementById('active-stores')
     };
     
-    applyFilters();
+    if (elements.totalProducts) {
+        elements.totalProducts.textContent = stats.totalProducts.toLocaleString();
+    }
+    
+    if (elements.avgPrice) {
+        elements.avgPrice.textContent = formatCurrency(stats.avgPrice);
+    }
+    
+    if (elements.priceChanges) {
+        elements.priceChanges.textContent = stats.priceChanges.toLocaleString();
+    }
+    
+    if (elements.activeStores) {
+        elements.activeStores.textContent = stats.activeStores.toString();
+    }
 }
 
-// Apply filters
-function applyFilters() {
-    let filteredProducts = [...generateMockProducts(100)]; // Start with all products
+// Update product count display
+function updateProductCount(count) {
+    const countElement = document.getElementById('products-count');
+    if (countElement) {
+        countElement.textContent = `${count.toLocaleString()} productos`;
+    }
+}
+
+// Manual scraping function
+async function runManualScraping() {
+    const button = document.querySelector('button[onclick*="runManualScraping"]');
+    const originalText = button ? button.innerHTML : '';
     
-    // Store filter
+    try {
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = `
+                <span class="loading-spinner"></span>
+                Ejecutando scraping...
+            `;
+        }
+        
+        showToast('Scraping', 'Iniciando scraping manual...', 'info');
+        
+        const response = await fetch('/api/scrape', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                test: false,
+                notify: true
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('Éxito', `Scraping completado: ${result.totalProducts || 0} productos procesados`, 'success');
+            
+            // Reload data after successful scraping
+            setTimeout(async () => {
+                await loadRealProducts();
+                await loadRealStats();
+            }, 2000);
+            
+        } else {
+            throw new Error(result.error || 'Error desconocido en el scraping');
+        }
+        
+    } catch (error) {
+        console.error('Scraping error:', error);
+        showToast('Error', `Error en scraping: ${error.message}`, 'error');
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    }
+}
+
+// Product actions
+function viewProduct(productId) {
+    window.location.href = `/product.html?id=${productId}`;
+}
+
+function openProductUrl(url) {
+    if (url) {
+        window.open(url, '_blank');
+    }
+}
+
+// Utility functions for product display
+function getProductImage(imageUrl, productName) {
+    if (imageUrl && imageUrl.trim() !== '' && imageUrl !== 'null') {
+        return imageUrl;
+    }
+    return getDefaultProductImage();
+}
+
+function getDefaultProductImage() {
+    return `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><rect width="60" height="60" fill="%23f0f0f0" stroke="%23ddd"/><text x="30" y="35" text-anchor="middle" font-size="20" fill="%23666">📦</text></svg>`;
+}
+
+function getStoreEmoji(storeName) {
+    const emojiMap = {
+        'Shiva Home': '🏠',
+        'Bazar Nuba': '🛍️',
+        'Nimba': '🎨',
+        'Vienna Hogar': '🪑',
+        'Magnolias Deco': '🌸',
+        'Duvet': '🛏️',
+        'Ganga Home': '💰',
+        'Binah Deco': '✨'
+    };
+    return emojiMap[storeName] || '🏪';
+}
+
+function getPriceChangeIndicator(currentPrice, previousPrice) {
+    const current = parseFloat(currentPrice) || 0;
+    const previous = parseFloat(previousPrice) || 0;
+    
+    if (previous === 0) return '';
+    
+    const difference = current - previous;
+    const percentage = ((difference / previous) * 100).toFixed(1);
+    
+    if (Math.abs(difference) < 1) {
+        return '<span class="price-neutral">→ Sin cambios</span>';
+    } else if (difference > 0) {
+        return `<span class="price-increase">↗ +${Math.abs(percentage)}%</span>`;
+    } else {
+        return `<span class="price-decrease">↘ -${Math.abs(percentage)}%</span>`;
+    }
+}
+
+// Loading states
+function showLoadingState() {
+    isLoading = true;
+    document.body.classList.add('loading');
+    
+    const mainContent = document.querySelector('main');
+    if (mainContent) {
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'loading-overlay';
+        loadingOverlay.innerHTML = `
+            <div class="loading-content">
+                <div class="loading-spinner large"></div>
+                <p>Cargando datos reales del sistema...</p>
+            </div>
+        `;
+        mainContent.appendChild(loadingOverlay);
+    }
+}
+
+function hideLoadingState() {
+    isLoading = false;
+    document.body.classList.remove('loading');
+    
+    const loadingOverlay = document.querySelector('.loading-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.remove();
+    }
+}
+
+// Error state
+function showErrorState(message) {
+    const mainContent = document.querySelector('main');
+    if (mainContent) {
+        mainContent.innerHTML = `
+            <div class="error-state">
+                <div class="error-icon">❌</div>
+                <h2>Error de Conexión</h2>
+                <p>${message}</p>
+                <button onclick="location.reload()" class="btn btn-primary btn-large">
+                    🔄 Reintentar
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Filter and sort functions (simplified - only work with real data)
+function applyFiltersAndSort(products) {
+    let filtered = [...products];
+    
+    // Apply filters
     if (currentFilters.store) {
-        filteredProducts = filteredProducts.filter(p => p.store.id == currentFilters.store);
+        filtered = filtered.filter(p => p.store_id === parseInt(currentFilters.store));
     }
     
-    // Search filter
-    if (currentFilters.search) {
-        const searchTerm = currentFilters.search.toLowerCase();
-        filteredProducts = filteredProducts.filter(p => 
-            p.name.toLowerCase().includes(searchTerm) ||
-            p.store.name.toLowerCase().includes(searchTerm)
-        );
+    if (currentFilters.available !== undefined) {
+        filtered = filtered.filter(p => p.is_available === currentFilters.available);
     }
     
-    // Price filters
     if (currentFilters.minPrice) {
-        filteredProducts = filteredProducts.filter(p => p.current_price >= currentFilters.minPrice);
+        filtered = filtered.filter(p => parseFloat(p.current_price) >= currentFilters.minPrice);
     }
     
     if (currentFilters.maxPrice) {
-        filteredProducts = filteredProducts.filter(p => p.current_price <= currentFilters.maxPrice);
+        filtered = filtered.filter(p => parseFloat(p.current_price) <= currentFilters.maxPrice);
     }
     
-    // Checkbox filters
-    if (currentFilters.onlyNew) {
-        filteredProducts = filteredProducts.filter(p => p.is_new);
-    }
-    
-    if (currentFilters.priceChanged) {
-        filteredProducts = filteredProducts.filter(p => p.current_price !== p.previous_price);
-    }
-    
-    if (currentFilters.inStock) {
-        filteredProducts = filteredProducts.filter(p => p.in_stock);
+    if (currentFilters.search) {
+        const searchTerm = currentFilters.search.toLowerCase();
+        filtered = filtered.filter(p => 
+            p.name.toLowerCase().includes(searchTerm) ||
+            p.store_name.toLowerCase().includes(searchTerm)
+        );
     }
     
     // Apply sorting
-    if (currentFilters.sort) {
-        const [field, order] = currentFilters.sort.split('-');
-        filteredProducts.sort((a, b) => {
-            let aVal = a[field];
-            let bVal = b[field];
-            
-            if (field === 'store') {
-                aVal = a.store.name;
-                bVal = b.store.name;
-            }
-            
-            if (typeof aVal === 'string') {
-                aVal = aVal.toLowerCase();
-                bVal = bVal.toLowerCase();
-            }
-            
-            if (order === 'desc') {
-                return aVal < bVal ? 1 : -1;
-            } else {
-                return aVal > bVal ? 1 : -1;
-            }
+    filtered.sort((a, b) => {
+        let aVal = a[currentSort.field];
+        let bVal = b[currentSort.field];
+        
+        // Handle different data types
+        if (currentSort.field.includes('price')) {
+            aVal = parseFloat(aVal) || 0;
+            bVal = parseFloat(bVal) || 0;
+        } else if (currentSort.field.includes('date') || currentSort.field.includes('updated')) {
+            aVal = new Date(aVal);
+            bVal = new Date(bVal);
+        }
+        
+        if (currentSort.order === 'desc') {
+            return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+        } else {
+            return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+        }
+    });
+    
+    return filtered;
+}
+
+// Pagination
+function paginateProducts(products) {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return products.slice(startIndex, startIndex + itemsPerPage);
+}
+
+function updatePagination(totalProducts) {
+    const totalPages = Math.ceil(totalProducts / itemsPerPage);
+    const paginationElement = document.getElementById('pagination');
+    
+    if (!paginationElement || totalPages <= 1) {
+        if (paginationElement) paginationElement.style.display = 'none';
+        return;
+    }
+    
+    paginationElement.style.display = 'flex';
+    paginationElement.innerHTML = `
+        <button onclick="changePage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>
+            ← Anterior
+        </button>
+        <span>Página ${currentPage} de ${totalPages}</span>
+        <button onclick="changePage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>
+            Siguiente →
+        </button>
+    `;
+}
+
+function changePage(page) {
+    const totalPages = Math.ceil(currentProducts.length / itemsPerPage);
+    if (page >= 1 && page <= totalPages) {
+        currentPage = page;
+        displayProducts(currentProducts);
+    }
+}
+
+// Event listeners setup
+function setupEventListeners() {
+    // Search input
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce((e) => {
+            currentFilters.search = e.target.value;
+            currentPage = 1;
+            displayProducts(currentProducts);
+        }, 300));
+    }
+    
+    // Filter inputs
+    const storeFilter = document.getElementById('store-filter');
+    if (storeFilter) {
+        storeFilter.addEventListener('change', (e) => {
+            currentFilters.store = e.target.value || null;
+            currentPage = 1;
+            displayProducts(currentProducts);
         });
     }
     
-    currentProducts = filteredProducts;
-    currentPage = 1;
-    
-    displayProducts();
-    updateResultsCount();
-    setupPagination();
-}
-
-// Clear filters
-function clearFilters() {
-    // Reset form elements
-    document.getElementById('store-filter').value = '';
-    document.getElementById('search-filter').value = '';
-    document.getElementById('min-price').value = '';
-    document.getElementById('max-price').value = '';
-    document.getElementById('sort-filter').value = 'updated_at-desc';
-    document.getElementById('only-new').checked = false;
-    document.getElementById('price-changed').checked = false;
-    document.getElementById('in-stock').checked = false;
-    
-    // Reset filters
-    currentFilters = {};
-    
-    // Reload products
-    loadProducts();
-    
-    showToast('Filtros', 'Filtros limpiados', 'info');
-}
-
-// Handle table sorting
-function handleSort(event) {
-    const header = event.target;
-    const field = header.dataset.sort;
-    
-    // Update sort state
-    if (currentSort.field === field) {
-        currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
-    } else {
-        currentSort.field = field;
-        currentSort.order = 'asc';
-    }
-    
-    // Update header classes
-    document.querySelectorAll('.products-table th').forEach(th => {
-        th.classList.remove('sort-asc', 'sort-desc');
+    // View toggle buttons
+    const viewButtons = document.querySelectorAll('.view-toggle');
+    viewButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            viewButtons.forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            displayProducts(currentProducts);
+        });
     });
-    header.classList.add(`sort-${currentSort.order}`);
     
-    // Update sort filter and apply
-    document.getElementById('sort-filter').value = `${field}-${currentSort.order}`;
-    handleFilterChange();
+    // Refresh button
+    const refreshButton = document.getElementById('refresh-button');
+    if (refreshButton) {
+        refreshButton.addEventListener('click', async () => {
+            await loadRealProducts();
+            await loadRealStats();
+            showToast('Actualizado', 'Datos actualizados desde la base de datos', 'success');
+        });
+    }
 }
 
-// Update last refresh time
+// Utility functions
+function formatCurrency(amount) {
+    const num = parseFloat(amount) || 0;
+    return new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 0
+    }).format(num);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-AR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
 function updateLastRefreshTime() {
     const updateTimeElement = document.getElementById('update-time');
     if (updateTimeElement) {
@@ -817,146 +646,29 @@ function updateLastRefreshTime() {
     }
 }
 
-// Setup auto refresh
-function setupAutoRefresh() {
-    // Refresh data every 5 minutes
-    setInterval(async () => {
-        try {
-            await loadStats();
-            await loadRecentActivity();
-            updateLastRefreshTime();
-            
-            console.log('🔄 Auto-refresh completed');
-        } catch (error) {
-            console.error('Auto-refresh error:', error);
-        }
-    }, 5 * 60 * 1000);
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }
 
-// Product actions
-function viewProduct(productId) {
-    // Navigate to product detail page
-    window.location.href = `/product.html?id=${productId}`;
-}
+// Global functions for onclick handlers
+window.viewProduct = viewProduct;
+window.openProductUrl = openProductUrl;
+window.runManualScraping = runManualScraping;
+window.changePage = changePage;
 
-function openProductUrl(url) {
-    if (url) {
-        window.open(url, '_blank');
-    }
-}
-
-// Global functions for buttons
-window.triggerScraping = function() {
-    showModal('scraping-modal');
-    populateScrapingModal();
+// Toast notifications (keep existing implementation)
+window.showToast = window.showToast || function(title, message, type = 'info') {
+    console.log(`${type.toUpperCase()}: ${title} - ${message}`);
 };
 
-window.exportData = function() {
-    const data = currentProducts.map(product => ({
-        nombre: product.name,
-        tienda: product.store.name,
-        precio_actual: product.current_price,
-        precio_anterior: product.previous_price,
-        moneda: product.currency,
-        en_stock: product.in_stock,
-        es_nuevo: product.is_new,
-        url: product.url,
-        actualizado: product.updated_at
-    }));
-    
-    const filename = `productos_tiendanube_${new Date().toISOString().split('T')[0]}.json`;
-    downloadJSON(data, filename);
-    
-    showToast('Exportar', `${data.length} productos exportados`, 'success');
-};
-
-window.viewAlerts = function() {
-    showToast('Alertas', 'Sistema de alertas próximamente', 'info');
-};
-
-window.openSettings = function() {
-    showToast('Configuración', 'Panel de configuración próximamente', 'info');
-};
-
-// Populate scraping modal
-function populateScrapingModal() {
-    const storeSelection = document.getElementById('store-selection');
-    if (!storeSelection) return;
-    
-    storeSelection.innerHTML = '';
-    
-    stores.forEach(store => {
-        const label = document.createElement('label');
-        label.className = 'checkbox-label';
-        label.innerHTML = `
-            <input type="checkbox" value="${store.id}" checked>
-            <span class="checkbox-custom"></span>
-            ${getStoreEmoji(store.name)} ${store.name}
-        `;
-        storeSelection.appendChild(label);
-    });
-}
-
-// Start scraping
-window.startScraping = async function() {
-    const progressContainer = document.getElementById('scraping-progress');
-    const optionsContainer = document.querySelector('.scraping-options');
-    
-    if (!progressContainer || !optionsContainer) return;
-    
-    optionsContainer.style.display = 'none';
-    progressContainer.style.display = 'block';
-    
-    try {
-        // Simulate scraping process
-        const progressFill = document.getElementById('progress-fill');
-        const progressText = document.getElementById('progress-text');
-        const progressLogs = document.getElementById('progress-logs');
-        
-        const steps = [
-            'Iniciando scraping...',
-            'Conectando con Shiva Home...',
-            'Extrayendo productos de Shiva Home...',
-            'Conectando con Nimba...',
-            'Extrayendo productos de Nimba...',
-            'Conectando con Vienna Hogar...',
-            'Extrayendo productos de Vienna Hogar...',
-            'Procesando datos...',
-            'Guardando en base de datos...',
-            'Scraping completado!'
-        ];
-        
-        for (let i = 0; i < steps.length; i++) {
-            const progress = ((i + 1) / steps.length) * 100;
-            
-            progressFill.style.width = `${progress}%`;
-            progressText.textContent = steps[i];
-            
-            const logEntry = document.createElement('div');
-            logEntry.textContent = `${new Date().toLocaleTimeString()} - ${steps[i]}`;
-            progressLogs.appendChild(logEntry);
-            progressLogs.scrollTop = progressLogs.scrollHeight;
-            
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-        
-        // Show completion
-        showToast('Scraping', 'Scraping completado exitosamente', 'success');
-        
-        setTimeout(() => {
-            closeModal();
-            handleRefresh();
-        }, 2000);
-        
-    } catch (error) {
-        console.error('Scraping error:', error);
-        showToast('Error', 'Error durante el scraping', 'error');
-        
-        // Reset modal
-        optionsContainer.style.display = 'block';
-        progressContainer.style.display = 'none';
-    }
-};
-
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', initializeDashboard);
+// Auto-refresh removed - only manual refresh now
+// No more fake data generation
+// No more setTimeout simulations
