@@ -1,7 +1,9 @@
 {
   "functions": {
     "api/**/*.js": {
-      "maxDuration": 300
+      "maxDuration": 300,
+      "memory": 1024
     }
-  }
+  },
+  "regions": ["iad1"]
 }
