@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TiendaNube Monitor - Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛍️</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loading-screen">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Cargando productos...</p>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span class="logo">🛍️</span>
+                <h1>TiendaNube Monitor</h1>
+            </div>
+            
+            <ul class="nav-links">
+                <li><a href="/" class="active">Dashboard</a></li>
+                <li><a href="/compare.html">Comparar</a></li>
+                <li><a href="/analytics.html">Analíticas</a></li>
+            </ul>
+            
+            <div class="nav-actions">
+                <span class="last-update" id="last-update">
+                    <span class="update-indicator"></span>
+                    Última actualización: <span id="update-time">--:--</span>
+                </span>
+                <button class="btn btn-refresh" id="refresh-btn" title="Actualizar datos">
+                    <span class="refresh-icon">🔄</span>
+                    Actualizar
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        <!-- Stats Overview -->
+        <section class="stats-overview">
+            <div class="stats-grid">
+                <div class="stat-card primary">
+                    <div class="stat-icon">📦</div>
+                    <div class="stat-content">
+                        <h3>Total Productos</h3>
+                        <span class="stat-number" id="total-products">
+                            <span class="loading-skeleton">0</span>
+                        </span>
+                        <span class="stat-change positive" id="products-change">
+                            <span class="change-icon">↗</span>+0 hoy
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="stat-card success">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-content">
+                        <h3>Cambios de Precio</h3>
+                        <span class="stat-number" id="price-changes">
+                            <span class="loading-skeleton">0</span>
+                        </span>
+                        <span class="stat-change" id="changes-trend">
+                            <span class="change-icon">📊</span>Últimas 24h
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="stat-card warning">
+                    <div class="stat-icon">✨</div>
+                    <div class="stat-content">
+                        <h3>Productos Nuevos</h3>
+                        <span class="stat-number" id="new-products">
+                            <span class="loading-skeleton">0</span>
+                        </span>
+                        <span class="stat-change" id="new-trend">
+                            <span class="change-icon">🕒</span>Hoy
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="stat-card info">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-content">
+                        <h3>Mejor Descuento</h3>
+                        <span class="stat-number" id="best-discount">
+                            <span class="loading-skeleton">0%</span>
+                        </span>
+                        <span class="stat-change" id="discount-store">
+                            <span class="change-icon">🏪</span>--
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Actions -->
+        <section class="quick-actions">
+            <div class="actions-grid">
+                <button class="action-btn" onclick="triggerScraping()">
+                    <span class="action-icon">🕷️</span>
+                    <span>Scraping Manual</span>
+                </button>
+                <button class="action-btn" onclick="exportData()">
+                    <span class="action-icon">📊</span>
+                    <span>Exportar Datos</span>
+                </button>
+                <button class="action-btn" onclick="viewAlerts()">
+                    <span class="action-icon">🔔</span>
+                    <span>Ver Alertas</span>
+                </button>
+                <button class="action-btn" onclick="openSettings()">
+                    <span class="action-icon">⚙️</span>
+                    <span>Configuración</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Filters Section -->
+        <section class="filters-section">
+            <div class="filters-container">
+                <h2>🔍 Filtros Avanzados</h2>
+                
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="store-filter">Tienda</label>
+                        <select id="store-filter" class="filter-select">
+                            <option value="">🏪 Todas las tiendas</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="search-filter">Búsqueda</label>
+                        <input type="text" id="search-filter" class="filter-input" placeholder="🔎 Buscar productos...">
+                    </div>
+                    
+                    <div class="filter-group price-range">
+                        <label>Rango de Precio</label>
+                        <div class="price-inputs">
+                            <input type="number" id="min-price" class="filter-input" placeholder="Min $">
+                            <span class="price-separator">-</span>
+                            <input type="number" id="max-price" class="filter-input" placeholder="Max $">
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="sort-filter">Ordenar por</label>
+                        <select id="sort-filter" class="filter-select">
+                            <option value="updated_at-desc">📅 Más recientes</option>
+                            <option value="current_price-asc">💰 Precio menor</option>
+                            <option value="current_price-desc">💎 Precio mayor</option>
+                            <option value="name-asc">🔤 Nombre A-Z</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group checkboxes">
+                        <label>Filtros adicionales</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="only-new">
+                                <span class="checkbox-custom"></span>
+                                ✨ Solo nuevos
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="price-changed">
+                                <span class="checkbox-custom"></span>
+                                📈 Con cambios
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="in-stock">
+                                <span class="checkbox-custom"></span>
+                                ✅ En stock
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-actions">
+                        <button class="btn btn-primary" id="apply-filters">Aplicar Filtros</button>
+                        <button class="btn btn-secondary" id="clear-filters">Limpiar</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Products Table -->
+        <section class="products-section">
+            <div class="section-header">
+                <h2>📋 Productos Monitoreados</h2>
+                <div class="section-actions">
+                    <span class="results-count">Mostrando <span id="results-count">0</span> productos</span>
+                    <div class="view-toggle">
+                        <button class="view-btn active" data-view="table" title="Vista tabla">📋</button>
+                        <button class="view-btn" data-view="cards" title="Vista tarjetas">🗃️</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Table View -->
+            <div class="table-container" id="table-view">
+                <div class="table-wrapper">
+                    <table class="products-table" id="products-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-sort="image">Imagen</th>
+                                <th class="sortable" data-sort="name">Producto</th>
+                                <th class="sortable" data-sort="store">Tienda</th>
+                                <th class="sortable" data-sort="current_price">Precio Actual</th>
+                                <th class="sortable" data-sort="previous_price">Precio Anterior</th>
+                                <th class="sortable" data-sort="change">Cambio</th>
+                                <th class="sortable" data-sort="stock">Stock</th>
+                                <th class="sortable" data-sort="updated_at">Última Act.</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-tbody">
+                            <!-- Loading skeleton -->
+                            <tr class="loading-row">
+                                <td colspan="9">
+                                    <div class="table-loading">
+                                        <div class="loading-spinner small">
+                                            <div class="spinner"></div>
+                                        </div>
+                                        <span>Cargando productos...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Cards View -->
+            <div class="cards-container" id="cards-view" style="display: none;">
+                <div class="products-grid" id="products-grid">
+                    <!-- Product cards will be loaded here -->
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="pagination-container">
+                <div class="pagination" id="pagination">
+                    <!-- Pagination will be generated dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Recent Activity -->
+        <section class="activity-section">
+            <h2>📈 Actividad Reciente</h2>
+            <div class="activity-list" id="activity-list">
+                <div class="activity-loading">
+                    <div class="loading-spinner small">
+                        <div class="spinner"></div>
+                    </div>
+                    <span>Cargando actividad...</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modals -->
+    
+    <!-- Product Detail Modal -->
+    <div class="modal" id="product-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Detalles del Producto</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Product details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scraping Modal -->
+    <div class="modal" id="scraping-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🕷️ Ejecutar Scraping</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="scraping-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="scrape-all-stores" checked>
+                        <span class="checkbox-custom"></span>
+                        Todas las tiendas
+                    </label>
+                    
+                    <div class="store-selection" id="store-selection">
+                        <!-- Store checkboxes will be populated here -->
+                    </div>
+                    
+                    <div class="scraping-actions">
+                        <button class="btn btn-primary" onclick="startScraping()">Iniciar Scraping</button>
+                        <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                    </div>
+                </div>
+                
+                <div class="scraping-progress" id="scraping-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="progress-text" id="progress-text">Iniciando...</div>
+                    <div class="progress-logs" id="progress-logs"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toast-container">
+        <!-- Toasts will be added dynamically -->
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/main.js"></script>
+    <script src="/js/dashboard.js"></script>
+    
+    <script>
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDashboard();
+        });
+    </script>
+</body>
+</html>

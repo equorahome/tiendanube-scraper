@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analíticas - TiendaNube Monitor</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛍️</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <style>
+        .analytics-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--space-6);
+        }
+        
+        .analytics-header {
+            text-align: center;
+            margin-bottom: var(--space-8);
+        }
+        
+        .analytics-title {
+            font-size: 2.5rem;
+            margin-bottom: var(--space-4);
+            background: linear-gradient(135deg, var(--primary-color), var(--success-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .analytics-subtitle {
+            color: var(--text-secondary);
+            font-size: 1.125rem;
+        }
+        
+        .date-filter-section {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-lg);
+            padding: var(--space-4);
+            margin-bottom: var(--space-6);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+            flex-wrap: wrap;
+        }
+        
+        .date-filter-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+        }
+        
+        .date-filter-controls {
+            display: flex;
+            gap: var(--space-2);
+            flex-wrap: wrap;
+        }
+        
+        .date-filter-btn {
+            padding: var(--space-2) var(--space-3);
+            border: 1px solid var(--border-color);
+            background: var(--bg-primary);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all var(--transition-fast);
+            white-space: nowrap;
+        }
+        
+        .date-filter-btn.active,
+        .date-filter-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .overview-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: var(--space-4);
+            margin-bottom: var(--space-8);
+        }
+        
+        .overview-card {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-lg);
+            padding: var(--space-6);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .overview-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-color);
+        }
+        
+        .overview-icon {
+            font-size: 2rem;
+            margin-bottom: var(--space-3);
+        }
+        
+        .overview-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--space-2);
+        }
+        
+        .overview-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-3);
+        }
+        
+        .overview-change {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--border-radius);
+        }
+        
+        .change-positive {
+            background: var(--success-light);
+            color: var(--success-color);
+        }
+        
+        .change-negative {
+            background: var(--danger-light);
+            color: var(--danger-color);
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: var(--space-6);
+            margin-bottom: var(--space-8);
+        }
+        
+        .chart-card {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-lg);
+            padding: var(--space-6);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-6);
+        }
+        
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .chart-actions {
+            display: flex;
+            gap: var(--space-2);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: var(--space-4);
+        }
+        
+        .chart-summary {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            background: var(--bg-secondary);
+            padding: var(--space-3);
+            border-radius: var(--border-radius);
+        }
+        
+        .stores-performance {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-lg);
+            padding: var(--space-6);
+            margin-bottom: var(--space-6);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+        
+        .performance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--space-4);
+        }
+        
+        .performance-table th,
+        .performance-table td {
+            padding: var(--space-3) var(--space-4);
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .performance-table th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .performance-table tbody tr:hover {
+            background: var(--bg-secondary);
+        }
+        
+        .store-name {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+        
+        .store-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .status-active { background: var(--success-color); }
+        .status-inactive { background: var(--danger-color); }
+        .status-warning { background: var(--warning-color); }
+        
+        .trend-indicator {
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+        }
+        
+        .trend-up { color: var(--success-color); }
+        .trend-down { color: var(--danger-color); }
+        .trend-neutral { color: var(--text-secondary); }
+        
+        .insights-section {
+            background: var(--bg-primary);
+            border-radius: var(--border-radius-lg);
+            padding: var(--space-6);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+        
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--space-4);
+            margin-top: var(--space-4);
+        }
+        
+        .insight-card {
+            background: var(--bg-secondary);
+            border-radius: var(--border-radius);
+            padding: var(--space-4);
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+        
+        .insight-type {
+            position: absolute;
+            top: var(--space-2);
+            right: var(--space-2);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--border-radius);
+        }
+        
+        .insight-opportunity {
+            background: var(--success-light);
+            color: var(--success-color);
+        }
+        
+        .insight-warning {
+            background: var(--warning-light);
+            color: var(--warning-color);
+        }
+        
+        .insight-info {
+            background: var(--info-light);
+            color: var(--info-color);
+        }
+        
+        .insight-icon {
+            font-size: 1.5rem;
+            margin-bottom: var(--space-3);
+        }
+        
+        .insight-title {
+            font-weight: 600;
+            margin-bottom: var(--space-2);
+            color: var(--text-primary);
+        }
+        
+        .insight-description {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-container {
+                height: 250px;
+            }
+            
+            .date-filter-section {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+            
+            .overview-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .overview-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span class="logo">🛍️</span>
+                <h1>TiendaNube Monitor</h1>
+            </div>
+            
+            <ul class="nav-links">
+                <li><a href="/">Dashboard</a></li>
+                <li><a href="/compare.html">Comparar</a></li>
+                <li><a href="/analytics.html" class="active">Analíticas</a></li>
+            </ul>
+            
+            <div class="nav-actions">
+                <a href="/" class="btn btn-secondary">← Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="analytics-container">
+        <!-- Header -->
+        <header class="analytics-header">
+            <h1 class="analytics-title">📊 Panel de Analíticas</h1>
+            <p class="analytics-subtitle">
+                Análisis profundo del mercado y rendimiento de tiendas
+            </p>
+        </header>
+
+        <!-- Date Filter -->
+        <section class="date-filter-section">
+            <span class="date-filter-label">📅 Período de análisis:</span>
+            <div class="date-filter-controls">
+                <button class="date-filter-btn" data-period="7" onclick="changeDateFilter(7)">Última semana</button>
+                <button class="date-filter-btn active" data-period="30" onclick="changeDateFilter(30)">Último mes</button>
+                <button class="date-filter-btn" data-period="90" onclick="changeDateFilter(90)">Últimos 3 meses</button>
+                <button class="date-filter-btn" data-period="365" onclick="changeDateFilter(365)">Último año</button>
+                <button class="date-filter-btn" data-period="all" onclick="changeDateFilter('all')">Todo el período</button>
+            </div>
+        </section>
+
+        <!-- Overview Stats -->
+        <section class="overview-stats">
+            <div class="overview-card">
+                <div class="overview-icon">🛍️</div>
+                <div id="total-products" class="overview-value">0</div>
+                <div class="overview-label">Total de Productos</div>
+                <span id="products-change" class="overview-change change-positive">+0 este período</span>
+            </div>
+            
+            <div class="overview-card">
+                <div class="overview-icon">💰</div>
+                <div id="avg-price" class="overview-value">$0</div>
+                <div class="overview-label">Precio Promedio</div>
+                <span id="price-change" class="overview-change change-positive">+0% vs anterior</span>
+            </div>
+            
+            <div class="overview-card">
+                <div class="overview-icon">📈</div>
+                <div id="price-changes" class="overview-value">0</div>
+                <div class="overview-label">Cambios de Precio</div>
+                <span id="changes-trend" class="overview-change change-positive">+0% actividad</span>
+            </div>
+            
+            <div class="overview-card">
+                <div class="overview-icon">🏪</div>
+                <div id="active-stores" class="overview-value">0</div>
+                <div class="overview-label">Tiendas Activas</div>
+                <span id="stores-status" class="overview-change change-positive">100% operativas</span>
+            </div>
+        </section>
+
+        <!-- Charts Grid -->
+        <section class="charts-grid">
+            <!-- Price Evolution Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">📈 Evolución de Precios Promedio</h3>
+                    <div class="chart-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="exportChart('price-evolution')">
+                            📊 Exportar
+                        </button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="price-evolution-chart"></canvas>
+                </div>
+                <div class="chart-summary">
+                    Promedio móvil de precios por categoría durante el período seleccionado
+                </div>
+            </div>
+
+            <!-- Store Performance Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">🏪 Rendimiento por Tienda</h3>
+                    <div class="chart-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="exportChart('store-performance')">
+                            📊 Exportar
+                        </button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="store-performance-chart"></canvas>
+                </div>
+                <div class="chart-summary">
+                    Número de productos y variación de precios por tienda
+                </div>
+            </div>
+
+            <!-- Category Distribution -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">🎯 Distribución por Categorías</h3>
+                    <div class="chart-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="exportChart('category-distribution')">
+                            📊 Exportar
+                        </button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="category-chart"></canvas>
+                </div>
+                <div class="chart-summary">
+                    Proporción de productos por categoría inferida
+                </div>
+            </div>
+
+            <!-- Market Activity -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">⚡ Actividad del Mercado</h3>
+                    <div class="chart-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="exportChart('market-activity')">
+                            📊 Exportar
+                        </button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="market-activity-chart"></canvas>
+                </div>
+                <div class="chart-summary">
+                    Frecuencia de cambios de precios y nuevos productos por día
+                </div>
+            </div>
+        </section>
+
+        <!-- Store Performance Table -->
+        <section class="stores-performance">
+            <h2>🏪 Rendimiento Detallado por Tienda</h2>
+            
+            <div style="overflow-x: auto;">
+                <table class="performance-table">
+                    <thead>
+                        <tr>
+                            <th>Tienda</th>
+                            <th>Productos</th>
+                            <th>Precio Promedio</th>
+                            <th>Rango de Precios</th>
+                            <th>Cambios (30d)</th>
+                            <th>Tendencia</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stores-tbody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: var(--space-8);">
+                                <div class="loading-spinner">
+                                    <div class="spinner"></div>
+                                    <span>Cargando datos de rendimiento...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- AI Insights -->
+        <section class="insights-section">
+            <h2>🤖 Insights Inteligentes</h2>
+            <div class="insights-grid" id="insights-grid">
+                <!-- Insights will be populated here -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="/js/utils.js"></script>
+    <script src="/js/analytics.js"></script>
+    
+    <script>
+        // Initialize analytics page when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeAnalyticsPage();
+        });
+    </script>
+</body>
+</html>

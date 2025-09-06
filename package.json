@@ -1,0 +1,31 @@
+{
+  "name": "tiendanube-scraper",
+  "version": "1.0.0",
+  "description": "Scraper automático para tiendas TiendaNube con monitoreo de precios",
+  "main": "api/scrape.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "test": "node api/test.js",
+    "build": "echo 'No build required'"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0",
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "puppeteer": "^23.0.0"
+  },
+  "engines": {
+    "node": ">=18.x"
+  },
+  "keywords": [
+    "scraper",
+    "tiendanube",
+    "precios",
+    "argentina"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT"
+}
